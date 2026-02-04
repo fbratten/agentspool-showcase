@@ -5,12 +5,13 @@ nav_order: 2
 description: "Complete guide for integrating agentspool with AI coding agents and OpenClaw gateway agents"
 ---
 
-# AI Agent Integration Guide
+# Coding Agent ↔ OpenClaw Agent Integration Guide
 
-**Purpose:** Enable bidirectional messaging between AI coding agents (running on Windows) and OpenClaw/Clawdbot gateway agents (running in WSL2)
+**Purpose:** Enable bidirectional messaging between Coding Agent (running on Windows) and OpenClaw/Clawdbot gateway agents (running in WSL2)
 
 **Version:** 1.0.0
-**Status:** Production Ready (240 tests)
+**Last Updated:** 2026-02-03
+**Status:** Production Ready (Phase 4 Complete, 224 tests: 196 pytest + 28 script integration)
 
 ---
 
@@ -22,9 +23,13 @@ description: "Complete guide for integrating agentspool with AI coding agents an
 4. [Installation](#installation)
 5. [Agent Registration](#agent-registration)
 6. [Message Flow](#message-flow)
-7. [Integration Patterns](#integration-patterns)
-8. [End-to-End Walkthrough](#end-to-end-walkthrough)
-9. [Troubleshooting](#troubleshooting)
+7. [OpenClaw Bridge Integration](#openclaw-bridge-integration)
+8. [Coding Agent Integration Patterns](#coding-agent-integration-patterns)
+9. [End-to-End Walkthrough](#end-to-end-walkthrough)
+10. [Troubleshooting](#troubleshooting)
+11. [Current Limitations](#current-limitations)
+12. [Future Enhancements](#future-enhancements)
+13. [Reference](#reference)
 
 ---
 
@@ -32,23 +37,23 @@ description: "Complete guide for integrating agentspool with AI coding agents an
 
 ### The Problem
 
-AI coding agents and OpenClaw gateway agents operate in different contexts:
+Coding Agent and OpenClaw gateway agents operate in different contexts:
 
 | Component | Runtime | Location |
 |-----------|---------|----------|
-| AI Coding Agent | Windows terminal session | Windows 11 host |
+| Coding Agent | Windows terminal session | Windows 11 host |
 | OpenClaw Agent | Gateway service | WSL2 Linux instance |
 
 By default, communication is **one-way only**:
 
 ```
-Coding Agent → OpenClaw Agent ✅  (via wsl -d <instance> -e openclaw agent --message "...")
+Coding Agent → OpenClaw Agent ✅  (via `wsl -d <instance> -e openclaw agent --message "..."`)
 OpenClaw Agent → Coding Agent ❌  (no mechanism)
 ```
 
 ### The Solution
 
-**agentspool** provides a SQLite-backed message spool with:
+**agent-comm** provides a SQLite-backed message spool with:
 - Atomic claim/lease semantics for reliable delivery
 - Agent registry with capability discovery
 - CLI tools for send/poll/ack workflows
@@ -59,9 +64,9 @@ This enables **true bidirectional communication**:
 
 ```
 Coding Agent ←→ Message Spool ←→ OpenClaw Agent
-      ↓              ↓              ↓
-    send()      coordination.db   poll()
-    poll()                        send()
+     ↓              ↓              ↓
+   send()      coordination.db   poll()
+   poll()                        send()
 ```
 
 ---
@@ -73,7 +78,7 @@ Coding Agent ←→ Message Spool ←→ OpenClaw Agent
 │                        Windows 11 Host                          │
 │                                                                 │
 │  ┌─────────────────┐                                           │
-│  │  Coding Agent   │                                           │
+│  │   Coding Agent   │                                           │
 │  │   (Terminal)    │                                           │
 │  └────────┬────────┘                                           │
 │           │                                                     │
@@ -88,7 +93,7 @@ Coding Agent ←→ Message Spool ←→ OpenClaw Agent
 │  │  └──────────────┘    │ (SQLite)     │    │ Agent     │  │   │
 │  │                      └──────────────┘    └───────────┘  │   │
 │  │                                                          │   │
-│  │  Location: ~/projects/agentspool/data/coordination.db   │   │
+│  │  Location: ~/projects/agent-comm/data/coordination.db   │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -97,9 +102,9 @@ Coding Agent ←→ Message Spool ←→ OpenClaw Agent
 
 | Component | Purpose | Location |
 |-----------|---------|----------|
-| `agent_comm` | Core Python library | `agent_comm/` |
-| `coordination.db` | SQLite message spool | `data/` |
-| `agent_comm_mcp` | MCP server (14 tools) | `agent_comm_mcp/` |
+| `agent_comm` | Core Python library | `~/projects/agent-comm/agent_comm/` |
+| `coordination.db` | SQLite message spool | `~/projects/agent-comm/data/` |
+| `agent_comm_mcp` | MCP server (14 tools) | `~/projects/agent-comm/agent_comm_mcp/` |
 | CLI | Command-line interface | `python -m agent_comm <command>` |
 
 ---
@@ -113,16 +118,24 @@ Coding Agent ←→ Message Spool ←→ OpenClaw Agent
 | Windows | Windows 10 21H2 | Windows 11 |
 | WSL2 | Any distro | Ubuntu 24.04 |
 | Python | 3.10+ | 3.12 |
+| OpenClaw/Clawdbot | 2026.1.x | Latest |
 
 ### Software Dependencies
 
 **On WSL2 instance:**
 - Python 3.10+ with pip
+- uv (recommended) or pip for package management
 - Git for cloning the repository
+- OpenClaw or Clawdbot gateway installed and running
 
 **On Windows host:**
-- AI coding agent (CLI-based) installed
+- Coding Agent CLI installed
 - WSL2 configured with target instance
+
+### Required Access
+
+- GitHub access to `fbratten/agentspool` repository
+- Personal Access Token with `repo` read scope
 
 ---
 
@@ -131,8 +144,20 @@ Coding Agent ←→ Message Spool ←→ OpenClaw Agent
 ### Step 1: Clone the Repository
 
 ```bash
+# From Windows, execute in WSL
 wsl -d <your-instance> -e bash -c '
 mkdir -p ~/projects
+cd ~/projects
+git clone https://github.com/fbratten/agentspool.git
+'
+```
+
+**If using a Personal Access Token:**
+
+```bash
+wsl -d <your-instance> -e bash -c '
+git config --global credential.helper store
+echo "https://<username>:<PAT>@github.com" >> ~/.git-credentials
 cd ~/projects
 git clone https://github.com/fbratten/agentspool.git
 '
@@ -142,10 +167,21 @@ git clone https://github.com/fbratten/agentspool.git
 
 ```bash
 wsl -d <your-instance> -e bash -c '
-cd ~/projects/agentspool
+cd ~/projects/agent-comm
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+'
+```
+
+**Using uv (faster):**
+
+```bash
+wsl -d <your-instance> -e bash -c '
+cd ~/projects/agent-comm
+uv venv .venv
+source .venv/bin/activate
+uv pip install -e ".[dev]"
 '
 ```
 
@@ -153,9 +189,19 @@ pip install -e ".[dev]"
 
 ```bash
 wsl -d <your-instance> -e bash -c '
-cd ~/projects/agentspool
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm --help
 '
+```
+
+**Expected output:**
+
+```
+usage: agent-comm [-h] [--project-root PROJECT_ROOT]
+                  [--transport {sqlite,file}]
+                  {register,send,poll,ack,nack,status,agents,stats,cleanup,bridge,relay} ...
+
+Inter-agent communication and coordination system
 ```
 
 ---
@@ -167,23 +213,53 @@ Before agents can communicate, they must be registered in the agent-comm registr
 ### Register the OpenClaw Agent
 
 ```bash
+wsl -d <your-instance> -e bash -c '
+cd ~/projects/agent-comm
+.venv/bin/python -m agent_comm register <agent-name> \
+  -c "research,chat,gmail,calendar,tools,files" \
+  -d <device-id>
+'
+```
+
+**Parameters:**
+- `<agent-name>`: Unique identifier (e.g., `gateway-agent`, `assistant-1`)
+- `-c`: Comma-separated capabilities
+- `-d`: Device identifier for routing
+
+**Example:**
+
+```bash
 .venv/bin/python -m agent_comm register my-assistant \
   -c "research,chat,gmail,tools" \
   -d wsl-main
 ```
 
-### Register the Coding Agent
+### Register Coding Agent
 
 ```bash
+wsl -d <your-instance> -e bash -c '
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm register coding-agent \
   -c "code,implementation,bash,mcp" \
   -d windows-host
+'
 ```
 
 ### Verify Registration
 
 ```bash
+wsl -d <your-instance> -e bash -c '
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm agents
+'
+```
+
+**Expected output:**
+
+```
+Registered agents (2):
+  my-assistant [active] caps=['research', 'chat', 'gmail', 'tools'] device=wsl-main transport=sqlite
+  coding-agent [active] caps=['code', 'implementation', 'bash', 'mcp'] device=windows-host transport=sqlite
 ```
 
 ---
@@ -205,12 +281,13 @@ All messages follow the MessageV2 schema:
   "timestamp": "2026-02-03T14:30:22Z",
   "priority": "high",
   "routing": {
+    "reply_to": null,
     "conversation_id": "conv_001",
     "ttl_hours": 24
   },
   "payload": {
     "type": "task_assignment",
-    "data": { "scope": "feature" }
+    "data": { "scope": "feature", "files": ["auth.py", "login.py"] }
   }
 }
 ```
@@ -222,52 +299,219 @@ queued → leased → acked
                 ↘ failed (after max_attempts)
 ```
 
+| State | Description |
+|-------|-------------|
+| `queued` | Message waiting for recipient |
+| `leased` | Claimed by recipient, processing |
+| `acked` | Successfully processed |
+| `failed` | Delivery failed after retries |
+
 ### CLI Commands
 
 #### Send a Message
 
 ```bash
+.venv/bin/python -m agent_comm send <from> <to> "<body>" \
+  -s "<subject>" \
+  --priority <normal|high|low>
+```
+
+**Example:**
+
+```bash
 .venv/bin/python -m agent_comm send coding-agent my-assistant \
-  "Please research AI agent frameworks" \
+  "Please research AI agent frameworks and summarize findings" \
   -s "Research task" \
   --priority high
+```
+
+**Output:**
+
+```
+Sent: msg_20260203_143022_a1b2c3
 ```
 
 #### Poll for Messages
 
 ```bash
+.venv/bin/python -m agent_comm poll <agent-name>
+```
+
+**Example:**
+
+```bash
 .venv/bin/python -m agent_comm poll my-assistant
+```
+
+**Output:**
+
+```
+Found 1 message(s) for my-assistant:
+
+  ID: msg_20260203_143022_a1b2c3
+  From: coding-agent
+  Subject: Research task
+  Body: Please research AI agent frameworks and summarize findings
 ```
 
 #### Acknowledge a Message
 
 ```bash
+.venv/bin/python -m agent_comm ack <message-id> <agent-name>
+```
+
+**Example:**
+
+```bash
 .venv/bin/python -m agent_comm ack msg_20260203_143022_a1b2c3 my-assistant
+```
+
+#### View Spool Statistics
+
+```bash
+.venv/bin/python -m agent_comm stats
+```
+
+**Output:**
+
+```json
+{
+  "total_messages": 5,
+  "deliveries": {
+    "queued": 1,
+    "acked": 4
+  }
+}
 ```
 
 ---
 
-## Integration Patterns
+## OpenClaw Bridge Integration
+
+The OpenClaw bridge connects agent-comm to OpenClaw/Clawdbot gateway agents.
+
+### How the Bridge Works
+
+```
+1. Coding Agent sends message → Spool (queued)
+2. Bridge polls spool for messages to gateway agent
+3. Bridge calls: openclaw agent --message "<body>" --json
+4. Gateway agent processes and responds
+5. Bridge sends response back → Spool
+6. Coding Agent polls for response
+```
+
+### Bridge Command
+
+```bash
+.venv/bin/python -m agent_comm bridge <agent-name> --wsl-instance <instance>
+```
+
+**Parameters:**
+- `<agent-name>`: The registered agent to bridge
+- `--wsl-instance`: WSL2 instance name where OpenClaw runs
+
+### Current Limitation
+
+> **Important:** The automated bridge expects to run from Windows host and call `wsl -d <instance>`. When running the bridge from *inside* WSL, it fails because `wsl` command is not available in that context.
+
+**Current workaround:** Manually forward messages using `openclaw agent --message`.
+
+### Manual Message Forwarding
+
+When the automated bridge cannot be used, forward messages manually:
+
+```bash
+# 1. Poll for pending messages
+.venv/bin/python -m agent_comm poll <gateway-agent>
+
+# 2. Forward to OpenClaw
+export PATH="/home/<user>/.local/share/pnpm:/home/linuxbrew/.linuxbrew/bin:$PATH"
+openclaw agent --agent main --message "<message-body>" --json
+
+# 3. Parse response and send reply
+.venv/bin/python -m agent_comm send <gateway-agent> <sender> "<response>" -s "Re: <subject>"
+
+# 4. Ack the original message
+.venv/bin/python -m agent_comm ack <message-id> <gateway-agent>
+```
+
+---
+
+## Coding Agent Integration Patterns
 
 ### Pattern 1: Direct CLI (Simplest)
 
-Execute agent-comm commands directly from your coding agent via bash:
+Execute agent-comm commands directly from Coding Agent via bash:
 
 ```bash
 # Send to gateway agent
 wsl -d <instance> -e bash -c '
-cd ~/projects/agentspool
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm send coding-agent <agent> "Your message" -s "Subject"
 '
 
 # Poll for responses
 wsl -d <instance> -e bash -c '
-cd ~/projects/agentspool
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm poll coding-agent
 '
 ```
 
-### Pattern 2: MCP Server Integration
+### Pattern 2: Shell Wrapper Script
+
+Create a wrapper script for convenience:
+
+**File: `~/projects/agent-comm/scripts/cc-send.sh`**
+
+```bash
+#!/bin/bash
+# Usage: ./cc-send.sh <to-agent> "<message>" "<subject>"
+cd ~/projects/agent-comm
+.venv/bin/python -m agent_comm send coding-agent "$1" "$2" -s "$3"
+```
+
+**File: `~/projects/agent-comm/scripts/cc-poll.sh`**
+
+```bash
+#!/bin/bash
+# Usage: ./cc-poll.sh
+cd ~/projects/agent-comm
+.venv/bin/python -m agent_comm poll coding-agent
+```
+
+### Pattern 3: Coding Agent Skill
+
+Create a Coding Agent skill for integrated messaging:
+
+**File: `.claude/skills/agent-comm/SKILL.md`**
+
+```yaml
+---
+name: agent-comm
+description: Send messages to and poll from registered agents via agent-comm
+allowed-tools:
+  - Bash
+---
+
+# Agent Communication Skill
+
+Use agent-comm to communicate with registered agents.
+
+## Send a Message
+
+```bash
+wsl -d <instance> -e bash -c 'cd ~/projects/agent-comm && .venv/bin/python -m agent_comm send coding-agent <agent> "$ARGUMENTS" -s "From Coding Agent"'
+```
+
+## Poll for Responses
+
+```bash
+wsl -d <instance> -e bash -c 'cd ~/projects/agent-comm && .venv/bin/python -m agent_comm poll coding-agent'
+```
+```
+
+### Pattern 4: MCP Server Integration
 
 agent-comm includes an MCP server with 14 tools:
 
@@ -280,52 +524,118 @@ agent-comm includes an MCP server with 14 tools:
 | `comm_nack` | Negative acknowledge |
 | `comm_message_status` | Check delivery status |
 | `comm_discover_agents` | List registered agents |
+| `comm_deregister` | Remove an agent |
 | `comm_spool_stats` | Spool statistics |
 | `comm_cleanup` | Remove expired messages |
 | `comm_get_conversation` | Get conversation history |
 | `comm_heartbeat` | Update agent heartbeat |
-| `comm_deregister` | Remove an agent |
 | `comm_relay_gen_secret` | Generate relay HMAC secret |
 | `comm_relay_list_secrets` | List relay secrets |
+
+**MCP Configuration (`.mcp.json`):**
+
+```json
+{
+  "mcpServers": {
+    "agent-comm-mcp": {
+      "command": "python",
+      "args": ["-m", "agent_comm_mcp"],
+      "cwd": "/path/to/agent-comm",
+      "env": {
+        "PYTHONPATH": "/path/to/agent-comm"
+      }
+    }
+  }
+}
+```
 
 ---
 
 ## End-to-End Walkthrough
 
+This walkthrough demonstrates complete bidirectional communication.
+
+### Setup
+
+```bash
+# Verify agents are registered
+wsl -d <instance> -e bash -c '
+cd ~/projects/agent-comm
+.venv/bin/python -m agent_comm agents
+'
+```
+
 ### Step 1: Coding Agent Sends Task
 
 ```bash
 wsl -d <instance> -e bash -c '
-cd ~/projects/agentspool
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm send coding-agent my-assistant \
-  "Please analyze the authentication module" \
+  "Please analyze the authentication module and suggest improvements" \
   -s "Code review request" \
   --priority high
 '
+```
+
+**Output:**
+```
+Sent: msg_20260203_150000_abc123
 ```
 
 ### Step 2: Gateway Agent Polls and Processes
 
 ```bash
 # Poll for messages
+wsl -d <instance> -e bash -c '
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm poll my-assistant
+'
 
-# Forward to OpenClaw
-openclaw agent --message "<message-body>" --json
+# Forward to OpenClaw (manual bridge)
+wsl -d <instance> -e bash -c '
+export PATH="$HOME/.local/share/pnpm:/home/linuxbrew/.linuxbrew/bin:$PATH"
+openclaw agent --agent main --message "[agent-comm msg_20260203_150000_abc123] Please analyze the authentication module and suggest improvements" --json
+'
 ```
 
 ### Step 3: Gateway Agent Sends Response
 
 ```bash
+wsl -d <instance> -e bash -c '
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm send my-assistant coding-agent \
-  "Analysis complete. Found 3 issues..." \
+  "Analysis complete. Found 3 issues: 1) Missing rate limiting, 2) Weak password hashing, 3) No session timeout. Recommendations attached." \
   -s "Re: Code review request"
+'
 ```
 
 ### Step 4: Coding Agent Receives Response
 
 ```bash
+wsl -d <instance> -e bash -c '
+cd ~/projects/agent-comm
 .venv/bin/python -m agent_comm poll coding-agent
+'
+```
+
+**Output:**
+```
+Found 1 message(s) for coding-agent:
+
+  ID: msg_20260203_150130_def456
+  From: my-assistant
+  Subject: Re: Code review request
+  Body: Analysis complete. Found 3 issues: 1) Missing rate limiting...
+```
+
+### Step 5: Acknowledge Messages
+
+```bash
+wsl -d <instance> -e bash -c '
+cd ~/projects/agent-comm
+.venv/bin/python -m agent_comm ack msg_20260203_150000_abc123 my-assistant
+.venv/bin/python -m agent_comm ack msg_20260203_150130_def456 coding-agent
+'
 ```
 
 ---
@@ -334,25 +644,61 @@ openclaw agent --message "<message-body>" --json
 
 ### Common Issues
 
-#### "Command not found: agent_comm"
+#### 1. "Command not found: agent_comm"
 
-**Fix:** Use full path to venv Python:
+**Cause:** Virtual environment not activated or not in PATH.
+
+**Fix:**
 ```bash
-~/projects/agentspool/.venv/bin/python -m agent_comm --help
+cd ~/projects/agent-comm
+source .venv/bin/activate
+python -m agent_comm --help
 ```
 
-#### "No agents registered"
+Or use full path:
+```bash
+~/projects/agent-comm/.venv/bin/python -m agent_comm --help
+```
 
-**Fix:** Register agents first:
+#### 2. "No agents registered"
+
+**Cause:** Agents not registered in the spool.
+
+**Fix:**
 ```bash
 .venv/bin/python -m agent_comm register <agent-name> -c "capability1,capability2" -d <device>
 ```
 
-#### Message stuck in "leased" state
+#### 3. "wsl command not found" (Bridge Error)
 
-**Fix:** Nack to return to queue:
+**Cause:** Running the bridge from inside WSL instead of Windows.
+
+**Current workaround:** Use manual message forwarding (see [OpenClaw Bridge Integration](#openclaw-bridge-integration)).
+
+#### 4. "Permission denied" accessing coordination.db
+
+**Cause:** Database locked by another process or permission issue.
+
+**Fix:**
 ```bash
+# Check for locks
+lsof ~/projects/agent-comm/data/coordination.db
+
+# Reset permissions
+chmod 664 ~/projects/agent-comm/data/coordination.db
+```
+
+#### 5. Message stuck in "leased" state
+
+**Cause:** Agent crashed during processing without acking.
+
+**Fix:**
+```bash
+# Nack to return to queue
 .venv/bin/python -m agent_comm nack <message-id> <agent>
+
+# Or cleanup expired leases
+.venv/bin/python -m agent_comm cleanup
 ```
 
 ### Diagnostic Commands
@@ -366,23 +712,133 @@ openclaw agent --message "<message-body>" --json
 
 # List all registered agents
 .venv/bin/python -m agent_comm agents
+
+# View SQLite database directly
+sqlite3 ~/projects/agent-comm/data/coordination.db ".schema"
 ```
 
 ---
 
-## Environment Variables
+## Current Limitations
+
+### 1. Bridge Requires Windows Host
+
+The automated bridge (`agent_comm bridge`) is designed to run from Windows and call into WSL via `wsl -d <instance>`. This means:
+
+- Cannot run the bridge daemon from inside WSL
+- Messages require manual forwarding when bridge unavailable
+- No fully automated polling loop inside WSL
+
+**Workaround:** Manual message forwarding using `openclaw agent --message`.
+
+### 2. No Push Notifications
+
+Currently uses polling model:
+- Agents must actively poll for messages
+- No webhook/callback mechanism for instant delivery
+- Polling interval determines latency
+
+### 3. Single-Device SQLite
+
+The SQLite transport (`coordination.db`) is local to one device:
+- Cross-device requires HTTP relay transport
+- Relay server must be running on target device
+- Tailscale/LAN required for connectivity
+
+---
+
+## Available: In-WSL Bridge (Direct Mode)
+
+The direct bridge runs inside WSL and calls `openclaw agent` directly — no Windows host or WSL wrapper required.
+
+### Usage
+
+```bash
+# Check if bridge target is available
+python -m agent_comm bridge nelly --direct \
+  --path-setup 'export PATH="$HOME/.local/share/pnpm:/home/linuxbrew/.linuxbrew/bin:$PATH"' \
+  --check
+
+# Run bridge daemon (polls and forwards messages)
+python -m agent_comm bridge nelly --direct \
+  --path-setup 'export PATH="$HOME/.local/share/pnpm:/home/linuxbrew/.linuxbrew/bin:$PATH"' \
+  --env GOG_KEYRING_PASSWORD=your-keyring-password \
+  --poll-interval 5
+
+# Single poll cycle
+python -m agent_comm bridge nelly --direct --path-setup '...' --once
+```
+
+### Python API
+
+```python
+from agent_comm.bridges import OpenClawDirectBridge
+from agent_comm.bridges.openclaw_direct_bridge import DirectBridgeConfig
+
+config = DirectBridgeConfig(
+    agent_id="nelly",
+    openclaw_agent="main",
+    path_setup='export PATH="$HOME/.local/share/pnpm:/home/linuxbrew/.linuxbrew/bin:$PATH"',
+    env_vars={"GOG_KEYRING_PASSWORD": "your-keyring-password"},
+    timeout_seconds=600,
+)
+bridge = OpenClawDirectBridge(config)
+
+# Check availability
+if bridge.is_available():
+    result = bridge.forward(message)
+```
+
+### Benefits
+- Eliminates Windows dependency for bridge
+- Can run as systemd user service inside WSL
+- Enables fully automated message delivery
+
+---
+
+## Future Enhancements
+
+### 1. Webhook Integration
+
+Add webhook support for real-time delivery:
+- Gateway calls webhook URL when message arrives
+- Coding Agent hosts lightweight webhook receiver
+- Eliminates polling latency
+
+### 3. Systemd Service
+
+Package bridge as systemd user service:
+
+```ini
+[Unit]
+Description=agent-comm bridge for OpenClaw
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/user/projects/agent-comm
+ExecStart=/home/user/projects/agent-comm/.venv/bin/python -m agent_comm bridge my-assistant --direct
+Restart=always
+
+[Install]
+WantedBy=default.target
+```
+
+---
+
+## Reference
+
+### Environment Variables
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `AGENT_COMM_DB_PATH` | SQLite database path | `./data/coordination.db` |
-| `AGENT_COMM_PROJECT_ROOT` | Project root | repo root |
-| `AGENT_COMM_TRANSPORT` | Transport backend | `sqlite` |
-| `AGENT_COMM_TTL_HOURS` | Message TTL | `24` |
-| `AGENT_COMM_LEASE_SECONDS` | Lease duration | `60` |
+| `AGENT_COMM_PROJECT_ROOT` | Project root for registry/config | agent-comm repo root |
+| `AGENT_COMM_TRANSPORT` | Transport backend (sqlite\|file) | `sqlite` |
+| `AGENT_COMM_TTL_HOURS` | Default message TTL in hours | `24` |
+| `AGENT_COMM_LEASE_SECONDS` | Default lease duration in seconds | `60` |
 
----
-
-## CLI Quick Reference
+### CLI Quick Reference
 
 | Command | Description |
 |---------|-------------|
@@ -398,6 +854,68 @@ openclaw agent --message "<message-body>" --json
 | `bridge <agent>` | Run bridge daemon |
 | `relay start` | Start HTTP relay server |
 
+### Project Files
+
+| Path | Purpose |
+|------|---------|
+| `~/projects/agent-comm/` | Project root |
+| `agent_comm/` | Core library |
+| `agent_comm_mcp/` | MCP server |
+| `data/coordination.db` | Message spool |
+| `.venv/` | Python virtual environment |
+| `tests/` | Test suite (224 tests) |
+
+### Related Documentation
+
+- [README.md](README.md) — Project overview and quick start
+- [docs/manual/](docs/manual/) — Full user manual
+- [CHANGELOG.md](CHANGELOG.md) — Version history
+- [CLAUDE.md](CLAUDE.md) — Coding Agent project guidelines
+
 ---
 
-*Part of the [agentspool](https://github.com/fbratten/agentspool) project*
+## Human Setup Guide (Quick Reference)
+
+For humans setting up Coding Agent to communicate with an OpenClaw agent:
+
+### 1. Clone & Install
+
+```bash
+wsl -d <your-wsl-instance>
+cd ~/projects
+git clone https://github.com/fbratten/agentspool.git
+cd agent-comm
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+### 2. Register Agents
+
+```bash
+python -m agent_comm register my-gateway-agent -c "chat,tools" -d wsl
+python -m agent_comm register coding-agent -c "code,bash" -d windows
+```
+
+### 3. Test Communication
+
+```bash
+# From Coding Agent (via WSL)
+python -m agent_comm send coding-agent my-gateway-agent "Hello!" -s "Test"
+
+# Check delivery
+python -m agent_comm poll my-gateway-agent
+```
+
+### 4. Forward to OpenClaw
+
+```bash
+# Manual forwarding (until automated bridge supports in-WSL mode)
+openclaw agent --message "Hello!" --json
+```
+
+That's it! Bidirectional messaging is now enabled.
+
+---
+
+*Part of the [agentspool](https://github.com/fbratten/agentspool) project — Inter-agent communication for LLM-powered AI entities*
