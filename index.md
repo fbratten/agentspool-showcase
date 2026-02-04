@@ -12,7 +12,7 @@ permalink: /
 
 {: .fs-6 .fw-300 }
 
-[Get Started](./docs/claude-code-integration.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
+[Get Started](./docs/agent-integration.md){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [View on GitHub](https://github.com/fbratten/agentspool){: .btn .fs-5 .mb-4 .mb-md-0 }
 
 ---
@@ -72,7 +72,7 @@ python3 -m agent_comm poll recipient
 
 ## Documentation
 
-- [Claude Code Integration Guide](./docs/claude-code-integration.md) - Complete setup guide
+- [AI Agent Integration Guide](./docs/agent-integration.md) - Complete setup guide
 - [Implementation Guide](./docs/implementation-guide.md) - Technical deep dive
 
 ## Related Projects

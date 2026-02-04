@@ -127,7 +127,7 @@ python3 -m agent_comm ack msg_20260130_143022_a1b2c3 agent-b
 
 ## Documentation
 
-- [Claude Code Integration Guide](./docs/claude-code-integration.md)
+- [AI Agent Integration Guide](./docs/agent-integration.md)
 - [Implementation Guide](./docs/implementation-guide.md)
 
 ## License
