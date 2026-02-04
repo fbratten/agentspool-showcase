@@ -1,0 +1,56 @@
+# agentspool Showcase - Jekyll Configuration
+
+title: agentspool Showcase
+description: Inter-agent communication and coordination for LLM-powered AI entities
+author: fbratten
+baseurl: "/agentspool-showcase"
+url: "https://fbratten.github.io"
+
+# Theme - Just the Docs
+remote_theme: just-the-docs/just-the-docs
+color_scheme: dark
+
+# Search
+search_enabled: true
+search:
+  heading_level: 2
+  previews: 3
+  preview_words_before: 5
+  preview_words_after: 10
+
+# Aux links (top right)
+aux_links:
+  "View on GitHub":
+    - "https://github.com/fbratten/agentspool-showcase"
+aux_links_new_tab: true
+
+# Footer
+footer_content: "agentspool Showcase - Inter-agent Communication Platform"
+
+# Features
+back_to_top: true
+back_to_top_text: "Back to top"
+enable_copy_code_button: true
+heading_anchors: true
+
+# External nav links
+nav_external_links:
+  - title: Source Code (agentspool)
+    url: https://github.com/fbratten/agentspool
+    hide_icon: false
+
+# Build settings
+markdown: kramdown
+kramdown:
+  syntax_highlighter_opts:
+    block:
+      line_numbers: false
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor
+
+github:
+  repo: fbratten/agentspool-showcase
