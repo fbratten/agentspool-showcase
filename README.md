@@ -9,9 +9,7 @@
 
 agentspool enables AI agents, assistants, and bots to communicate and coordinate with each other. Built for the [AdaptiveArts.ai](https://adaptivearts.ai) ecosystem.
 
-**Initial use case:** Claude Code (WSL PC1) communicating with Nelly/Moltbot (OpenClaw gateway agent on same or remote PC).
-
-**Far goal:** N-to-N cross-device agent communication.
+**Goal:** N-to-N cross-device agent communication with reliable message delivery.
 
 ## Architecture
 
@@ -25,8 +23,8 @@ agentspool enables AI agents, assistants, and bots to communicate and coordinate
            ┌───────────────────┼───────────────────┐
            │                   │                   │
     ┌──────┴──────┐    ┌──────┴──────┐    ┌──────┴──────┐
-    │ Claude Code │    │   Nelly /   │    │  Agent N    │
-    │  (WSL PC1)  │    │   Moltbot   │    │  (any PC)   │
+    │  Agent A    │    │  OpenClaw   │    │  Agent N    │
+    │  (Device 1) │    │  Gateway    │    │  (any PC)   │
     └──────┬──────┘    └──────┬──────┘    └──────┬──────┘
            │                   │                   │
            └───────────────────┼───────────────────┘
@@ -41,7 +39,7 @@ agentspool enables AI agents, assistants, and bots to communicate and coordinate
 | **MessageV2 Protocol** | Typed payloads, priority levels, conversation threading, TTL |
 | **SQLite Spool** | WAL-mode durable queue with atomic claim, lease/ack semantics |
 | **HTTP Relay** | HMAC-SHA256 authenticated cross-device communication |
-| **MCP Server** | 14 tools via FastMCP for Claude Code integration |
+| **MCP Server** | 14 tools via FastMCP for AI agent integration |
 | **Bridge System** | OpenClaw gateway integration for bot agents |
 
 ## Transport Layer
@@ -67,18 +65,18 @@ agentspool enables AI agents, assistants, and bots to communicate and coordinate
 
 ```bash
 # Register agents
-python3 -m agent_comm register claude-code-pc1 -c "code,mcp,bash" -d pc1
-python3 -m agent_comm register nelly-pc2 -c "research,chat" -d pc2
+python3 -m agent_comm register agent-a -c "code,mcp,bash" -d device1
+python3 -m agent_comm register agent-b -c "research,chat" -d device2
 
 # Send a message
-python3 -m agent_comm send claude-code-pc1 nelly-pc2 "Research AI frameworks" \
+python3 -m agent_comm send agent-a agent-b "Research AI frameworks" \
     -s "Research task" --priority high
 
 # Poll for messages (as recipient)
-python3 -m agent_comm poll nelly-pc2
+python3 -m agent_comm poll agent-b
 
 # Acknowledge processing
-python3 -m agent_comm ack msg_20260130_143022_a1b2c3 nelly-pc2
+python3 -m agent_comm ack msg_20260130_143022_a1b2c3 agent-b
 ```
 
 ## MessageV2 Protocol
@@ -87,8 +85,8 @@ python3 -m agent_comm ack msg_20260130_143022_a1b2c3 nelly-pc2
 {
   "id": "msg_20260130_143022_a1b2c3",
   "version": "2.0",
-  "from": "claude-code-pc1",
-  "to": "nelly-pc2",
+  "from": "agent-a",
+  "to": "agent-b",
   "subject": "Research task",
   "body": "Research AI agent frameworks and summarize findings.",
   "timestamp": "2026-01-30T14:30:22Z",
@@ -125,7 +123,7 @@ python3 -m agent_comm ack msg_20260130_143022_a1b2c3 nelly-pc2
 |---------|-------------|
 | [SPINE](https://fbratten.github.io/spine-showcase/) | Multi-agent backbone (agent-comm-mcp is SPINE server #19) |
 | [Minna Memory](https://fbratten.github.io/spine-showcase/docs/minna-memory-integration.html) | Agent registry + shared context |
-| OpenClaw/Clawdbot | Gateway runtime for Nelly and bot agents |
+| OpenClaw | Gateway runtime for bot agents |
 
 ## Documentation
 

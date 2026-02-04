@@ -23,7 +23,7 @@ A standalone Python library and CLI enabling AI agents, assistants, and bots to 
 
 ### The Problem
 
-Claude Code and other AI agents operate in isolated contexts. By default, there's no mechanism for agents to communicate with each other.
+AI agents operate in isolated contexts. By default, there's no mechanism for agents to communicate with each other.
 
 ### The Solution
 
@@ -38,10 +38,10 @@ Claude Code and other AI agents operate in isolated contexts. By default, there'
 ## Architecture
 
 ```
-Claude Code ←→ Message Spool ←→ OpenClaw Agent
-     ↓              ↓              ↓
-   send()      coordination.db   poll()
-   poll()                        send()
+Agent A ←→ Message Spool ←→ Agent B
+   ↓             ↓             ↓
+ send()    coordination.db   poll()
+ poll()                      send()
 ```
 
 ## Key Features
@@ -51,7 +51,7 @@ Claude Code ←→ Message Spool ←→ OpenClaw Agent
 | **MessageV2 Protocol** | Typed payloads, priority levels, conversation threading |
 | **SQLite Spool** | WAL-mode durable queue with atomic claim semantics |
 | **HTTP Relay** | HMAC-SHA256 authenticated cross-device communication |
-| **MCP Server** | 14 tools via FastMCP for Claude Code integration |
+| **MCP Server** | 14 tools via FastMCP for AI agent integration |
 | **Bridge System** | OpenClaw gateway integration for bot agents |
 
 ## Quick Start
