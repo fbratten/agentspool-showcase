@@ -123,8 +123,8 @@ python3 -m agent_comm ack msg_20260130_143022_a1b2c3 nelly-pc2
 
 | Project | Relationship |
 |---------|-------------|
-| [SPINE](https://github.com/fbratten/spine) | Multi-agent backbone (agent-comm-mcp is SPINE server #19) |
-| [Minna Memory](https://github.com/fbratten/mem-system-lite-mcp) | Agent registry + shared context |
+| [SPINE](https://fbratten.github.io/spine-showcase/) | Multi-agent backbone (agent-comm-mcp is SPINE server #19) |
+| [Minna Memory](https://fbratten.github.io/spine-showcase/docs/minna-memory-integration.html) | Agent registry + shared context |
 | OpenClaw/Clawdbot | Gateway runtime for Nelly and bot agents |
 
 ## Documentation

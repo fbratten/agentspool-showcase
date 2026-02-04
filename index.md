@@ -79,8 +79,8 @@ python3 -m agent_comm poll recipient
 
 | Project | Role |
 |:--------|:-----|
-| [SPINE](https://github.com/fbratten/spine) | Multi-agent backbone |
-| [Minna Memory](https://github.com/fbratten/mem-system-lite-mcp) | Agent registry + shared context |
+| [SPINE](https://fbratten.github.io/spine-showcase/) | Multi-agent backbone |
+| [Minna Memory](https://fbratten.github.io/spine-showcase/docs/minna-memory-integration.html) | Agent registry + shared context |
 
 ---
 
