@@ -35,8 +35,8 @@ Technical deep dive into agentspool architecture, protocols, and implementation 
            ┌───────────────────┼───────────────────┐
            │                   │                   │
     ┌──────┴──────┐    ┌──────┴──────┐    ┌──────┴──────┐
-    │ Claude Code │    │   Nelly /   │    │  Agent N    │
-    │  (WSL PC1)  │    │   Moltbot   │    │  (any PC)   │
+    │  Agent A    │    │  OpenClaw   │    │  Agent N    │
+    │  (Device 1) │    │  Gateway    │    │  (any PC)   │
     └──────┬──────┘    └──────┬──────┘    └──────┬──────┘
            │                   │                   │
            └───────────────────┼───────────────────┘
@@ -72,8 +72,8 @@ All messages follow the MessageV2 schema:
 {
   "id": "msg_20260130_143022_a1b2c3",
   "version": "2.0",
-  "from": "claude-code-pc1",
-  "to": "nelly-pc2",
+  "from": "agent-a",
+  "to": "agent-b",
   "subject": "Research task",
   "body": "Research AI agent frameworks and summarize findings.",
   "timestamp": "2026-01-30T14:30:22Z",
@@ -215,11 +215,11 @@ class AgentProfile:
 Agent profiles can be stored in Minna Memory as entities:
 
 ```
-Entity: agent:claude-code-pc1
+Entity: agent:agent-a
 Type: concept
 Attributes:
   - capabilities: ["code", "mcp", "bash"]
-  - device: "pc1"
+  - device: "device1"
   - transport: "sqlite"
 ```
 
