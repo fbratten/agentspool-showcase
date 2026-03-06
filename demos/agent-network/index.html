@@ -47,6 +47,9 @@
                     <option value="research">Research</option>
                     <option value="tools">Tools</option>
                     <option value="routing">Routing</option>
+                    <option value="support">Support</option>
+                    <option value="monitoring">Monitoring</option>
+                    <option value="scheduling">Scheduling</option>
                 </select>
             </div>
             <div>
@@ -94,11 +97,11 @@
         <div class="mt-6 bg-white border border-slate-200 rounded-xl p-6">
             <h3 class="text-sm font-bold text-slate-700 mb-3">Legend</h3>
             <div class="flex flex-wrap gap-6 text-sm">
-                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span> Coding Agent</div>
-                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> OpenClaw Bot</div>
-                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span> Clawdbot</div>
-                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Specialist</div>
-                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> Relay</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#a855f7"></span> Coding Agent</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#10b981"></span> OpenClaw Bot</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#ec4899"></span> Clawdbot</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#f59e0b"></span> Specialist</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#0ea5e9"></span> Relay</div>
             </div>
             <div class="flex flex-wrap gap-6 text-sm mt-2 text-slate-500">
                 <div>Solid line = SQLite transport</div>
@@ -121,6 +124,9 @@
         { id: 'claude-code', label: 'Claude Code', type: 'coding-agent', capabilities: ['code', 'review', 'debug', 'git'], device: 'windows-host', color: '#a855f7', radius: 28 },
         { id: 'nelly', label: 'Nelly', type: 'openclaw-bot', capabilities: ['chat', 'research', 'tools', 'telegram'], device: 'wsl-nelly', color: '#10b981', radius: 32 },
         { id: 'agatha', label: 'Agatha', type: 'clawdbot', capabilities: ['chat', 'whatsapp', 'tools'], device: 'wsl-ubuntu', color: '#ec4899', radius: 20 },
+        { id: 'hanna', label: 'Hanna', type: 'clawdbot', capabilities: ['chat', 'email', 'scheduling', 'tools'], device: 'wsl-ubuntu', color: '#f472b6', radius: 22 },
+        { id: 'cs-bot', label: 'CS-Bot', type: 'specialist', capabilities: ['chat', 'support', 'tickets', 'routing'], device: 'wsl-nelly', color: '#fb923c', radius: 20 },
+        { id: 'service-agent', label: 'Service Agent', type: 'specialist', capabilities: ['tools', 'monitoring', 'health', 'alerts'], device: 'wsl-nelly', color: '#facc15', radius: 22 },
         { id: 'research-bot', label: 'Research Bot', type: 'specialist', capabilities: ['research', 'summarize', 'cite'], device: 'wsl-nelly', color: '#f59e0b', radius: 18 },
         { id: 'gateway', label: 'Gateway', type: 'relay', capabilities: ['http-relay', 'auth', 'routing'], device: 'wsl-nelly', color: '#0ea5e9', radius: 24 }
     ];
@@ -128,9 +134,17 @@
     const linksData = [
         { source: 'claude-code', target: 'nelly', transport: 'sqlite', messages: 847, color: '#6366f1' },
         { source: 'claude-code', target: 'agatha', transport: 'sqlite', messages: 23, color: '#6366f1' },
+        { source: 'claude-code', target: 'hanna', transport: 'sqlite', messages: 64, color: '#6366f1' },
         { source: 'nelly', target: 'gateway', transport: 'http', messages: 1250, color: '#f59e0b' },
+        { source: 'nelly', target: 'cs-bot', transport: 'sqlite', messages: 430, color: '#6366f1' },
+        { source: 'nelly', target: 'service-agent', transport: 'sqlite', messages: 215, color: '#6366f1' },
+        { source: 'nelly', target: 'hanna', transport: 'sqlite', messages: 189, color: '#6366f1' },
         { source: 'gateway', target: 'research-bot', transport: 'http', messages: 312, color: '#f59e0b' },
-        { source: 'nelly', target: 'agatha', transport: 'sqlite', messages: 156, color: '#6366f1' }
+        { source: 'gateway', target: 'cs-bot', transport: 'http', messages: 578, color: '#f59e0b' },
+        { source: 'gateway', target: 'service-agent', transport: 'http', messages: 146, color: '#f59e0b' },
+        { source: 'nelly', target: 'agatha', transport: 'sqlite', messages: 156, color: '#6366f1' },
+        { source: 'hanna', target: 'agatha', transport: 'sqlite', messages: 37, color: '#6366f1' },
+        { source: 'cs-bot', target: 'service-agent', transport: 'sqlite', messages: 92, color: '#6366f1' }
     ];
 
     // === D3 Setup ===
