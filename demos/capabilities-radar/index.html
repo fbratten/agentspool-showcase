@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Capabilities Radar - agentspool Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; margin: 0; }
+        .toggle-active { background-color: var(--agent-color); color: white; }
+        .weight-slider { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 3px; background: #cbd5e1; outline: none; }
+        .weight-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #10b981; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="max-w-6xl mx-auto p-6 md:p-12">
+
+        <!-- Header -->
+        <header class="mb-8 border-b border-slate-200 pb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded uppercase tracking-wide font-bold">agentspool</span>
+                <span class="text-slate-400">&rarr;</span>
+                <a href="../" class="text-slate-600 hover:text-emerald-600">Demos</a>
+                <span class="text-slate-400">&rarr;</span>
+                <span class="text-slate-600">Capabilities Radar</span>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">Capabilities Radar</h1>
+            <p class="text-lg text-slate-600">Compare agent capability profiles across six dimensions.</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Chart -->
+            <div class="lg:col-span-2">
+                <div class="bg-white border border-slate-200 rounded-xl p-6">
+                    <canvas id="radarChart" height="450"></canvas>
+                </div>
+                <div class="mt-4 flex justify-end">
+                    <button id="exportPng" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Export PNG</button>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="space-y-6">
+
+                <!-- Agent Toggles -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6">
+                    <h3 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">Agents</h3>
+                    <div class="space-y-2" id="agentToggles"></div>
+                </div>
+
+                <!-- Dimension Weights -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6">
+                    <h3 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">Dimension Weights</h3>
+                    <div class="space-y-3" id="weightSliders"></div>
+                    <button id="resetWeights" class="mt-4 text-sm text-emerald-600 hover:underline">Reset weights</button>
+                </div>
+
+                <!-- Add Custom Agent -->
+                <div class="bg-white border border-slate-200 rounded-xl p-6">
+                    <h3 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">Add Custom Agent</h3>
+                    <div class="space-y-3">
+                        <input id="customName" type="text" placeholder="Agent name" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm">
+                        <div class="grid grid-cols-2 gap-2" id="customScores"></div>
+                        <button id="addCustom" class="w-full bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Add Agent</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center">
+            <a href="../" class="text-emerald-600 hover:underline text-sm">&larr; Back to Demos</a>
+            <a href="https://fbratten.github.io/agentspool-showcase/" class="text-emerald-600 hover:underline text-sm">agentspool Showcase</a>
+        </footer>
+    </div>
+
+    <script>
+    // === Sample Data ===
+    const dimensions = ['Code', 'Research', 'Communication', 'Tools', 'Workflow', 'Memory'];
+    const weights = [1, 1, 1, 1, 1, 1];
+
+    const agentDatasets = [
+        { name: 'Claude Code', data: [10, 7, 4, 9, 8, 6], color: '#a855f7', borderColor: '#a855f7', visible: true },
+        { name: 'Nelly', data: [3, 8, 10, 7, 6, 8], color: '#10b981', borderColor: '#10b981', visible: true },
+        { name: 'Agatha', data: [2, 5, 10, 5, 4, 5], color: '#ec4899', borderColor: '#ec4899', visible: true },
+        { name: 'Research Bot', data: [1, 10, 3, 6, 2, 7], color: '#f59e0b', borderColor: '#f59e0b', visible: true }
+    ];
+
+    const customColors = ['#06b6d4', '#ef4444', '#84cc16', '#f97316', '#6366f1', '#14b8a6'];
+    let customColorIndex = 0;
+
+    // === Chart ===
+    const ctx = document.getElementById('radarChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: dimensions,
+            datasets: getVisibleDatasets()
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 10,
+                    ticks: {
+                        stepSize: 2,
+                        font: { family: 'Inter', size: 11 },
+                        backdropColor: 'transparent'
+                    },
+                    pointLabels: {
+                        font: { family: 'Inter', size: 13, weight: '600' }
+                    },
+                    grid: { color: '#e2e8f0' },
+                    angleLines: { color: '#e2e8f0' }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'bottom',
+                    labels: { font: { family: 'Inter', size: 12 }, usePointStyle: true, padding: 20 }
+                },
+                tooltip: {
+                    titleFont: { family: 'Inter' },
+                    bodyFont: { family: 'Inter' },
+                    callbacks: {
+                        label: function(context) {
+                            const dimIndex = context.dataIndex;
+                            const weight = weights[dimIndex];
+                            const raw = context.raw;
+                            const weighted = (raw * weight).toFixed(1);
+                            return `${context.dataset.label}: ${raw} (weighted: ${weighted})`;
+                        }
+                    }
+                }
+            },
+            interaction: { mode: 'nearest', intersect: false }
+        }
+    });
+
+    function getVisibleDatasets() {
+        return agentDatasets.filter(a => a.visible).map(a => ({
+            label: a.name,
+            data: a.data.map((v, i) => Math.min(10, v * weights[i])),
+            backgroundColor: a.color + '22',
+            borderColor: a.borderColor,
+            borderWidth: 2,
+            pointBackgroundColor: a.borderColor,
+            pointBorderColor: '#fff',
+            pointRadius: 4,
+            pointHoverRadius: 6
+        }));
+    }
+
+    function updateChart() {
+        chart.data.datasets = getVisibleDatasets();
+        chart.update();
+    }
+
+    // === Agent Toggles ===
+    function renderToggles() {
+        const container = document.getElementById('agentToggles');
+        container.innerHTML = '';
+        agentDatasets.forEach((agent, i) => {
+            const btn = document.createElement('button');
+            btn.className = `w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition border ${agent.visible ? 'text-white border-transparent' : 'text-slate-600 bg-slate-50 border-slate-200'}`;
+            if (agent.visible) {
+                btn.style.backgroundColor = agent.color;
+            }
+            btn.textContent = agent.name;
+            btn.addEventListener('click', () => {
+                agent.visible = !agent.visible;
+                renderToggles();
+                updateChart();
+            });
+            container.appendChild(btn);
+        });
+    }
+    renderToggles();
+
+    // === Weight Sliders ===
+    function renderWeights() {
+        const container = document.getElementById('weightSliders');
+        container.innerHTML = '';
+        dimensions.forEach((dim, i) => {
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = `
+                <div class="flex justify-between text-xs mb-1">
+                    <span class="font-semibold text-slate-700">${dim}</span>
+                    <span class="text-slate-400" id="weightVal${i}">${weights[i].toFixed(1)}x</span>
+                </div>
+                <input type="range" min="0" max="2" step="0.1" value="${weights[i]}" class="weight-slider w-full" data-index="${i}">
+            `;
+            const slider = wrapper.querySelector('input');
+            slider.addEventListener('input', (e) => {
+                weights[i] = parseFloat(e.target.value);
+                document.getElementById(`weightVal${i}`).textContent = weights[i].toFixed(1) + 'x';
+                updateChart();
+            });
+            container.appendChild(wrapper);
+        });
+    }
+    renderWeights();
+
+    document.getElementById('resetWeights').addEventListener('click', () => {
+        weights.fill(1);
+        renderWeights();
+        updateChart();
+    });
+
+    // === Custom Score Inputs ===
+    const customScoresContainer = document.getElementById('customScores');
+    dimensions.forEach((dim, i) => {
+        customScoresContainer.innerHTML += `
+            <div>
+                <label class="text-xs text-slate-500">${dim}</label>
+                <input type="number" min="0" max="10" value="5" class="custom-score w-full border border-slate-300 rounded px-2 py-1 text-sm" data-dim="${i}">
+            </div>
+        `;
+    });
+
+    document.getElementById('addCustom').addEventListener('click', () => {
+        const name = document.getElementById('customName').value.trim();
+        if (!name) return;
+        const scores = [];
+        document.querySelectorAll('.custom-score').forEach(input => {
+            scores.push(Math.min(10, Math.max(0, parseInt(input.value) || 5)));
+        });
+        const color = customColors[customColorIndex % customColors.length];
+        customColorIndex++;
+        agentDatasets.push({
+            name,
+            data: scores,
+            color,
+            borderColor: color,
+            visible: true
+        });
+        document.getElementById('customName').value = '';
+        renderToggles();
+        updateChart();
+    });
+
+    // === Export PNG ===
+    document.getElementById('exportPng').addEventListener('click', () => {
+        const link = document.createElement('a');
+        link.download = 'agentspool-capabilities-radar.png';
+        link.href = document.getElementById('radarChart').toDataURL('image/png', 1.0);
+        link.click();
+    });
+    </script>
+
+</body>
+</html>

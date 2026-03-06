@@ -75,6 +75,20 @@ python3 -m agent_comm poll recipient
 - [AI Agent Integration Guide](./docs/agent-integration.md) - Complete setup guide
 - [Implementation Guide](./docs/implementation-guide.md) - Technical deep dive
 
+## Interactive Demos
+
+Explore agentspool concepts through hands-on visualizations:
+
+| Demo | Description |
+|:-----|:------------|
+| [Agent Network Graph](./demos/agent-network/) | Visualize agent topology and message routing with an interactive knowledge graph (Sigma.js) |
+| [Message Flow Sankey](./demos/message-flow/) | Trace messages through transports, the spool, and delivery states with animated flow (D3.js) |
+| [Capabilities Radar](./demos/capabilities-radar/) | Compare agent capability profiles across six dimensions (Chart.js) |
+
+[Browse All Demos](./demos/){: .btn .btn-outline .fs-5 .mb-4 .mb-md-0 }
+
+---
+
 ## Related Projects
 
 | Project | Role |

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Flow Sankey - agentspool Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; margin: 0; }
+        #sankey-container { width: 100%; border-radius: 0.75rem; overflow: hidden; position: relative; }
+        #sankey-container svg { display: block; }
+        .sankey-tooltip {
+            position: absolute; pointer-events: none; background: #1e293b; color: #e2e8f0;
+            padding: 8px 12px; border-radius: 8px; font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10; opacity: 0; transition: opacity 0.15s;
+        }
+        .particle { fill: white; opacity: 0.7; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="max-w-6xl mx-auto p-6 md:p-12">
+
+        <!-- Header -->
+        <header class="mb-8 border-b border-slate-200 pb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded uppercase tracking-wide font-bold">agentspool</span>
+                <span class="text-slate-400">&rarr;</span>
+                <a href="../" class="text-slate-600 hover:text-emerald-600">Demos</a>
+                <span class="text-slate-400">&rarr;</span>
+                <span class="text-slate-600">Message Flow</span>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">Message Flow Sankey</h1>
+            <p class="text-lg text-slate-600">Visualize how messages route through transports, the spool, and into delivery states.</p>
+        </header>
+
+        <!-- Controls -->
+        <div class="flex flex-wrap gap-4 mb-6">
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-semibold text-slate-700">Dark Mode</label>
+                <button id="darkToggle" class="relative w-12 h-6 rounded-full bg-slate-300 transition cursor-pointer">
+                    <span id="darkToggleKnob" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform"></span>
+                </button>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-semibold text-slate-700">Layout</label>
+                <select id="layoutDir" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                    <option value="horizontal">Horizontal (LR)</option>
+                    <option value="vertical">Vertical (TB)</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-3">
+                <label class="text-sm font-semibold text-slate-700">Particles</label>
+                <button id="particleToggle" class="relative w-12 h-6 rounded-full bg-emerald-500 transition cursor-pointer">
+                    <span id="particleToggleKnob" class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform translate-x-6"></span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sankey Chart -->
+        <div id="sankey-container">
+            <div class="sankey-tooltip" id="tooltip"></div>
+        </div>
+
+        <!-- Stats -->
+        <div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-slate-900">1,315</div>
+                <div class="text-xs text-slate-500 uppercase tracking-wide mt-1">Total Messages</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-emerald-600">1,289</div>
+                <div class="text-xs text-slate-500 uppercase tracking-wide mt-1">Acknowledged</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-red-500">26</div>
+                <div class="text-xs text-slate-500 uppercase tracking-wide mt-1">Failed</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                <div class="text-2xl font-bold text-slate-700">98.0%</div>
+                <div class="text-xs text-slate-500 uppercase tracking-wide mt-1">Delivery Rate</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center">
+            <a href="../" class="text-emerald-600 hover:underline text-sm">&larr; Back to Demos</a>
+            <a href="https://fbratten.github.io/agentspool-showcase/" class="text-emerald-600 hover:underline text-sm">agentspool Showcase</a>
+        </footer>
+    </div>
+
+    <script>
+    // === Sample Data ===
+    const sankeyData = {
+        nodes: [
+            { id: 'coding-agent', name: 'Coding Agent', category: 'source', color: '#a855f7' },
+            { id: 'nelly-src', name: 'Nelly', category: 'source', color: '#10b981' },
+            { id: 'sqlite-transport', name: 'SQLite Transport', category: 'transport', color: '#f59e0b' },
+            { id: 'http-transport', name: 'HTTP Transport', category: 'transport', color: '#f59e0b' },
+            { id: 'message-spool', name: 'Message Spool', category: 'core', color: '#8b5cf6' },
+            { id: 'queued', name: 'Queued', category: 'state', color: '#94a3b8' },
+            { id: 'leased', name: 'Leased', category: 'state', color: '#eab308' },
+            { id: 'acked', name: 'Acked', category: 'state', color: '#10b981' },
+            { id: 'failed', name: 'Failed', category: 'state', color: '#ef4444' },
+            { id: 'recv-nelly', name: 'Recipient: Nelly', category: 'sink', color: '#10b981' },
+            { id: 'recv-claude', name: 'Recipient: Claude', category: 'sink', color: '#a855f7' }
+        ],
+        links: [
+            { source: 'coding-agent', target: 'sqlite-transport', value: 847 },
+            { source: 'nelly-src', target: 'http-transport', value: 312 },
+            { source: 'nelly-src', target: 'sqlite-transport', value: 156 },
+            { source: 'sqlite-transport', target: 'message-spool', value: 1003 },
+            { source: 'http-transport', target: 'message-spool', value: 312 },
+            { source: 'message-spool', target: 'queued', value: 1315 },
+            { source: 'queued', target: 'leased', value: 1315 },
+            { source: 'leased', target: 'acked', value: 1289 },
+            { source: 'leased', target: 'failed', value: 26 },
+            { source: 'acked', target: 'recv-nelly', value: 842 },
+            { source: 'acked', target: 'recv-claude', value: 447 }
+        ]
+    };
+
+    // State
+    let isDark = false;
+    let isVertical = false;
+    let showParticles = true;
+    let animationId = null;
+
+    function getNodeMap() {
+        const map = {};
+        sankeyData.nodes.forEach((n, i) => { map[n.id] = i; });
+        return map;
+    }
+
+    function render() {
+        const container = document.getElementById('sankey-container');
+        const tooltip = document.getElementById('tooltip');
+        // Remove old svg
+        d3.select('#sankey-container svg').remove();
+
+        const margin = { top: 20, right: 20, bottom: 20, left: 20 };
+        const width = container.clientWidth - margin.left - margin.right;
+        const height = isVertical ? 700 : 500;
+
+        const bg = isDark ? '#0f172a' : '#f8fafc';
+        const textColor = isDark ? '#e2e8f0' : '#334155';
+
+        const svg = d3.select('#sankey-container')
+            .append('svg')
+            .attr('width', width + margin.left + margin.right)
+            .attr('height', height + margin.top + margin.bottom)
+            .style('background', bg)
+            .append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const nodeMap = getNodeMap();
+        const graphNodes = sankeyData.nodes.map(n => ({ ...n }));
+        const graphLinks = sankeyData.links.map(l => ({
+            source: nodeMap[l.source],
+            target: nodeMap[l.target],
+            value: l.value
+        }));
+
+        const sankeyGen = d3.sankey()
+            .nodeWidth(20)
+            .nodePadding(18)
+            .extent([[0, 0], [width, height]])
+            .nodeSort(null);
+
+        if (isVertical) {
+            // For vertical, swap x/y in extent — d3-sankey doesn't natively support vertical,
+            // so we'll transpose after layout
+        }
+
+        const { nodes, links } = sankeyGen({
+            nodes: graphNodes,
+            links: graphLinks
+        });
+
+        // Links
+        const linkGroup = svg.append('g')
+            .selectAll('.link')
+            .data(links)
+            .join('path')
+            .attr('class', 'link')
+            .attr('d', d3.sankeyLinkHorizontal())
+            .attr('fill', 'none')
+            .attr('stroke', d => {
+                const srcColor = sankeyData.nodes[d.source.index].color;
+                return srcColor + (isDark ? '66' : '44');
+            })
+            .attr('stroke-width', d => Math.max(1, d.width))
+            .style('cursor', 'pointer')
+            .on('mouseover', function(event, d) {
+                d3.select(this).attr('stroke', sankeyData.nodes[d.source.index].color + 'cc');
+                const srcName = sankeyData.nodes[d.source.index].name;
+                const tgtName = sankeyData.nodes[d.target.index].name;
+                tooltip.style.opacity = 1;
+                tooltip.innerHTML = `<strong>${srcName}</strong> &rarr; <strong>${tgtName}</strong><br>${d.value.toLocaleString()} messages`;
+            })
+            .on('mousemove', function(event) {
+                const rect = container.getBoundingClientRect();
+                tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
+                tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
+            })
+            .on('mouseout', function(event, d) {
+                d3.select(this).attr('stroke', sankeyData.nodes[d.source.index].color + (isDark ? '66' : '44'));
+                tooltip.style.opacity = 0;
+            });
+
+        // Nodes
+        svg.append('g')
+            .selectAll('.node')
+            .data(nodes)
+            .join('rect')
+            .attr('x', d => d.x0)
+            .attr('y', d => d.y0)
+            .attr('width', d => d.x1 - d.x0)
+            .attr('height', d => d.y1 - d.y0)
+            .attr('fill', d => sankeyData.nodes[d.index].color)
+            .attr('rx', 4)
+            .style('cursor', 'pointer')
+            .on('mouseover', function(event, d) {
+                const n = sankeyData.nodes[d.index];
+                tooltip.style.opacity = 1;
+                tooltip.innerHTML = `<strong>${n.name}</strong><br>Category: ${n.category}`;
+            })
+            .on('mousemove', function(event) {
+                const rect = container.getBoundingClientRect();
+                tooltip.style.left = (event.clientX - rect.left + 12) + 'px';
+                tooltip.style.top = (event.clientY - rect.top - 10) + 'px';
+            })
+            .on('mouseout', () => { tooltip.style.opacity = 0; });
+
+        // Labels
+        svg.append('g')
+            .selectAll('.label')
+            .data(nodes)
+            .join('text')
+            .attr('x', d => d.x0 < width / 2 ? d.x1 + 8 : d.x0 - 8)
+            .attr('y', d => (d.y0 + d.y1) / 2)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', d => d.x0 < width / 2 ? 'start' : 'end')
+            .attr('fill', textColor)
+            .attr('font-size', '12px')
+            .attr('font-weight', '600')
+            .text(d => sankeyData.nodes[d.index].name);
+
+        // Particles
+        if (showParticles) {
+            cancelAnimationFrame(animationId);
+            const particleGroup = svg.append('g');
+            const particles = [];
+            const linkPaths = document.querySelectorAll('.link');
+
+            links.forEach((link, i) => {
+                const count = Math.max(1, Math.floor(link.value / 200));
+                for (let j = 0; j < count; j++) {
+                    particles.push({
+                        linkIndex: i,
+                        offset: Math.random(),
+                        speed: 0.002 + Math.random() * 0.003,
+                        size: 2 + Math.random() * 2
+                    });
+                }
+            });
+
+            const circles = particleGroup.selectAll('.particle')
+                .data(particles)
+                .join('circle')
+                .attr('class', 'particle')
+                .attr('r', d => d.size)
+                .attr('fill', isDark ? '#ffffff' : '#334155')
+                .attr('opacity', 0.6);
+
+            function animate() {
+                particles.forEach(p => {
+                    p.offset += p.speed;
+                    if (p.offset > 1) p.offset = 0;
+                });
+
+                circles.each(function(d) {
+                    const pathEl = linkPaths[d.linkIndex];
+                    if (pathEl) {
+                        const len = pathEl.getTotalLength();
+                        const pt = pathEl.getPointAtLength(d.offset * len);
+                        d3.select(this).attr('cx', pt.x).attr('cy', pt.y);
+                    }
+                });
+
+                animationId = requestAnimationFrame(animate);
+            }
+            animate();
+        }
+    }
+
+    // === Dark mode toggle ===
+    document.getElementById('darkToggle').addEventListener('click', () => {
+        isDark = !isDark;
+        const knob = document.getElementById('darkToggleKnob');
+        const btn = document.getElementById('darkToggle');
+        if (isDark) {
+            knob.style.transform = 'translateX(1.5rem)';
+            btn.classList.replace('bg-slate-300', 'bg-emerald-500');
+        } else {
+            knob.style.transform = 'translateX(0)';
+            btn.classList.replace('bg-emerald-500', 'bg-slate-300');
+        }
+        render();
+    });
+
+    // === Layout toggle ===
+    document.getElementById('layoutDir').addEventListener('change', (e) => {
+        isVertical = e.target.value === 'vertical';
+        render();
+    });
+
+    // === Particle toggle ===
+    document.getElementById('particleToggle').addEventListener('click', () => {
+        showParticles = !showParticles;
+        const knob = document.getElementById('particleToggleKnob');
+        const btn = document.getElementById('particleToggle');
+        if (showParticles) {
+            knob.style.transform = 'translateX(1.5rem)';
+            btn.classList.replace('bg-slate-300', 'bg-emerald-500');
+        } else {
+            knob.style.transform = 'translateX(0)';
+            btn.classList.replace('bg-emerald-500', 'bg-slate-300');
+        }
+        render();
+    });
+
+    // Initial render
+    render();
+    window.addEventListener('resize', () => { render(); });
+    </script>
+
+</body>
+</html>

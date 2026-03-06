@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>agentspool - Interactive Demos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-6 md:p-12">
+
+    <div class="max-w-4xl mx-auto">
+
+        <!-- Header -->
+        <header class="mb-12 border-b border-slate-200 pb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded uppercase tracking-wide font-bold">
+                    agentspool
+                </span>
+                <span class="text-slate-400">&rarr;</span>
+                <span class="text-slate-600">Interactive Demos</span>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">Interactive Demos</h1>
+            <p class="text-lg text-slate-600">Explore agent communication patterns through interactive visualizations.</p>
+        </header>
+
+        <!-- Demo Grid -->
+        <section class="mb-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <!-- Agent Network -->
+                <a href="agent-network/" class="block bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-xl shadow-sm border border-emerald-400 hover:shadow-lg transition group text-white">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="bg-white/20 text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">
+                            G
+                        </span>
+                        <div>
+                            <h3 class="font-bold group-hover:text-emerald-100 transition">Agent Network Graph</h3>
+                            <span class="text-xs text-emerald-200">Sigma.js &middot; Interactive</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-emerald-100 leading-relaxed">
+                        Visualize agent network topology and message routing. Explore connections between coding agents, bots, and relays.
+                    </p>
+                    <div class="mt-4 text-white text-sm font-medium group-hover:underline">
+                        Explore &rarr;
+                    </div>
+                </a>
+
+                <!-- Message Flow -->
+                <a href="message-flow/" class="block bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-emerald-300 hover:shadow-md transition group">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="bg-amber-500 text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">
+                            S
+                        </span>
+                        <div>
+                            <h3 class="font-bold text-slate-900 group-hover:text-emerald-600 transition">Message Flow Sankey</h3>
+                            <span class="text-xs text-slate-400">D3.js &middot; Interactive</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Visualize message routing through transports, the spool, and delivery states with animated flow particles.
+                    </p>
+                    <div class="mt-4 text-emerald-600 text-sm font-medium group-hover:underline">
+                        Try it &rarr;
+                    </div>
+                </a>
+
+                <!-- Capabilities Radar -->
+                <a href="capabilities-radar/" class="block bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:border-emerald-300 hover:shadow-md transition group">
+                    <div class="flex items-center gap-3 mb-3">
+                        <span class="bg-violet-500 text-white w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold">
+                            R
+                        </span>
+                        <div>
+                            <h3 class="font-bold text-slate-900 group-hover:text-emerald-600 transition">Capabilities Radar</h3>
+                            <span class="text-xs text-slate-400">Chart.js &middot; Interactive</span>
+                        </div>
+                    </div>
+                    <p class="text-sm text-slate-600 leading-relaxed">
+                        Compare agent capability profiles across six dimensions. Toggle agents, adjust weights, and export charts.
+                    </p>
+                    <div class="mt-4 text-emerald-600 text-sm font-medium group-hover:underline">
+                        Try it &rarr;
+                    </div>
+                </a>
+
+            </div>
+        </section>
+
+        <!-- Back Link -->
+        <footer class="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center">
+            <a href="../" class="text-emerald-600 hover:underline text-sm">
+                &larr; Back to agentspool Showcase
+            </a>
+            <span class="text-xs text-slate-400">
+                Portfolio: <a href="https://github.com/fbratten" class="hover:underline">github.com/fbratten</a>
+            </span>
+        </footer>
+    </div>
+
+</body>
+</html>

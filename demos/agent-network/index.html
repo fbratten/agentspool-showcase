@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Network Graph - agentspool Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sigma.js/2.4.0/sigma.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/graphology/0.25.4/graphology.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; margin: 0; }
+        #sigma-container { width: 100%; height: 500px; background: #0f172a; border-radius: 0.75rem; position: relative; }
+        .agent-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="max-w-6xl mx-auto p-6 md:p-12">
+
+        <!-- Header -->
+        <header class="mb-8 border-b border-slate-200 pb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <span class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded uppercase tracking-wide font-bold">agentspool</span>
+                <span class="text-slate-400">&rarr;</span>
+                <a href="../" class="text-slate-600 hover:text-emerald-600">Demos</a>
+                <span class="text-slate-400">&rarr;</span>
+                <span class="text-slate-600">Agent Network</span>
+            </div>
+            <h1 class="text-3xl font-bold text-slate-900 mb-2">Agent Network Graph</h1>
+            <p class="text-lg text-slate-600">Visualize agent network topology and message routing between agents.</p>
+        </header>
+
+        <!-- Controls -->
+        <div class="flex flex-wrap gap-4 mb-6">
+            <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-1">Filter by Capability</label>
+                <select id="capabilityFilter" class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
+                    <option value="all">All Capabilities</option>
+                    <option value="code">Code</option>
+                    <option value="chat">Chat</option>
+                    <option value="research">Research</option>
+                    <option value="tools">Tools</option>
+                    <option value="routing">Routing</option>
+                </select>
+            </div>
+            <div>
+                <label class="text-sm font-semibold text-slate-700 block mb-1">Search Agent</label>
+                <input id="searchInput" type="text" placeholder="Type agent name..." class="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white w-48">
+            </div>
+            <div class="flex items-end">
+                <button id="resetBtn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-semibold transition">Reset View</button>
+            </div>
+        </div>
+
+        <!-- Graph Canvas -->
+        <div id="sigma-container"></div>
+
+        <!-- Agent Details Panel -->
+        <div id="detailsPanel" class="mt-6 bg-white border border-slate-200 rounded-xl p-6 hidden">
+            <h3 class="text-lg font-bold text-slate-900 mb-3" id="detailName">Agent Details</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <span class="text-xs text-slate-400 uppercase tracking-wide">Type</span>
+                    <p class="text-sm font-semibold text-slate-700" id="detailType">-</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase tracking-wide">Device</span>
+                    <p class="text-sm font-semibold text-slate-700" id="detailDevice">-</p>
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 uppercase tracking-wide">Total Messages</span>
+                    <p class="text-sm font-semibold text-slate-700" id="detailMessages">-</p>
+                </div>
+            </div>
+            <div class="mt-3">
+                <span class="text-xs text-slate-400 uppercase tracking-wide">Capabilities</span>
+                <div class="flex flex-wrap gap-2 mt-1" id="detailCapabilities"></div>
+            </div>
+            <div class="mt-3">
+                <span class="text-xs text-slate-400 uppercase tracking-wide">Connections</span>
+                <div class="flex flex-wrap gap-2 mt-1" id="detailConnections"></div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="mt-6 bg-white border border-slate-200 rounded-xl p-6">
+            <h3 class="text-sm font-bold text-slate-700 mb-3">Legend</h3>
+            <div class="flex flex-wrap gap-6 text-sm">
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-purple-500 inline-block"></span> Coding Agent</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> OpenClaw Bot</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-pink-500 inline-block"></span> Clawdbot</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Specialist</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-sky-500 inline-block"></span> Relay</div>
+            </div>
+            <div class="flex flex-wrap gap-6 text-sm mt-2 text-slate-500">
+                <div>Solid line = SQLite transport</div>
+                <div>Dashed line = HTTP transport</div>
+                <div>Edge thickness = message volume</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 pt-6 border-t border-slate-200 flex justify-between items-center">
+            <a href="../" class="text-emerald-600 hover:underline text-sm">&larr; Back to Demos</a>
+            <a href="https://fbratten.github.io/agentspool-showcase/" class="text-emerald-600 hover:underline text-sm">agentspool Showcase</a>
+        </footer>
+    </div>
+
+    <script>
+    // === Sample Data ===
+    const agents = [
+        { id: 'claude-code', label: 'Claude Code', type: 'coding-agent', capabilities: ['code', 'review', 'debug', 'git'], device: 'windows-host', color: '#a855f7', x: 0, y: 0, size: 18 },
+        { id: 'nelly', label: 'Nelly', type: 'openclaw-bot', capabilities: ['chat', 'research', 'tools', 'telegram'], device: 'wsl-nelly', color: '#10b981', x: 3, y: 1, size: 20 },
+        { id: 'agatha', label: 'Agatha', type: 'clawdbot', capabilities: ['chat', 'whatsapp', 'tools'], device: 'wsl-ubuntu', color: '#ec4899', x: 1, y: 3, size: 12 },
+        { id: 'research-bot', label: 'Research Bot', type: 'specialist', capabilities: ['research', 'summarize', 'cite'], device: 'wsl-nelly', color: '#f59e0b', x: 5, y: 2, size: 10 },
+        { id: 'gateway', label: 'Gateway', type: 'relay', capabilities: ['http-relay', 'auth', 'routing'], device: 'wsl-nelly', color: '#0ea5e9', x: 4, y: 0, size: 14 }
+    ];
+
+    const edges = [
+        { source: 'claude-code', target: 'nelly', transport: 'sqlite', messages: 847, color: '#6366f1' },
+        { source: 'claude-code', target: 'agatha', transport: 'sqlite', messages: 23, color: '#6366f1' },
+        { source: 'nelly', target: 'gateway', transport: 'http', messages: 1250, color: '#f59e0b' },
+        { source: 'gateway', target: 'research-bot', transport: 'http', messages: 312, color: '#f59e0b' },
+        { source: 'nelly', target: 'agatha', transport: 'sqlite', messages: 156, color: '#6366f1' }
+    ];
+
+    // === Build Graph ===
+    const graph = new graphology.Graph({ type: 'undirected' });
+
+    agents.forEach(a => {
+        graph.addNode(a.id, {
+            label: a.label,
+            x: a.x,
+            y: a.y,
+            size: a.size,
+            color: a.color,
+            type: a.type,
+            capabilities: a.capabilities,
+            device: a.device,
+            originalColor: a.color
+        });
+    });
+
+    edges.forEach((e, i) => {
+        graph.addEdge(e.source, e.target, {
+            size: Math.max(2, Math.log(e.messages) * 1.5),
+            color: e.color + '99',
+            transport: e.transport,
+            messages: e.messages,
+            type: e.transport === 'http' ? 'dashed' : 'line',
+            originalColor: e.color + '99'
+        });
+    });
+
+    // === Render ===
+    const container = document.getElementById('sigma-container');
+    const renderer = new Sigma(graph, container, {
+        renderLabels: true,
+        labelColor: { color: '#e2e8f0' },
+        labelFont: 'Inter',
+        labelSize: 14,
+        labelWeight: '600',
+        defaultEdgeType: 'line',
+        edgeLabelFont: 'Inter',
+        stagePadding: 60,
+        nodeReducer: (node, data) => {
+            const res = { ...data };
+            return res;
+        },
+        edgeReducer: (edge, data) => {
+            const res = { ...data };
+            return res;
+        }
+    });
+
+    // === Click handler ===
+    renderer.on('clickNode', ({ node }) => {
+        const attrs = graph.getNodeAttributes(node);
+        const panel = document.getElementById('detailsPanel');
+        panel.classList.remove('hidden');
+
+        document.getElementById('detailName').textContent = attrs.label;
+        document.getElementById('detailType').textContent = attrs.type;
+        document.getElementById('detailDevice').textContent = attrs.device;
+
+        // Calculate total messages
+        let totalMessages = 0;
+        const connections = [];
+        graph.forEachEdge(node, (edge, edgeAttrs, source, target) => {
+            totalMessages += edgeAttrs.messages;
+            const peer = source === node ? target : source;
+            const peerLabel = graph.getNodeAttribute(peer, 'label');
+            connections.push({ label: peerLabel, messages: edgeAttrs.messages, transport: edgeAttrs.transport });
+        });
+        document.getElementById('detailMessages').textContent = totalMessages.toLocaleString();
+
+        // Capabilities
+        const capsEl = document.getElementById('detailCapabilities');
+        capsEl.innerHTML = attrs.capabilities.map(c =>
+            `<span class="agent-badge bg-slate-100 text-slate-700">${c}</span>`
+        ).join('');
+
+        // Connections
+        const connsEl = document.getElementById('detailConnections');
+        connsEl.innerHTML = connections.map(c =>
+            `<span class="agent-badge bg-emerald-50 text-emerald-700">${c.label} (${c.messages} via ${c.transport})</span>`
+        ).join('');
+
+        // Highlight node
+        graph.forEachNode((n, a) => {
+            graph.setNodeAttribute(n, 'color', n === node ? a.originalColor : a.originalColor + '33');
+        });
+        graph.forEachEdge((e, a, source, target) => {
+            const connected = source === node || target === node;
+            graph.setEdgeAttribute(e, 'color', connected ? a.originalColor.replace('99','ff') : a.originalColor.replace('99','22'));
+        });
+    });
+
+    renderer.on('clickStage', () => {
+        document.getElementById('detailsPanel').classList.add('hidden');
+        graph.forEachNode((n, a) => { graph.setNodeAttribute(n, 'color', a.originalColor); });
+        graph.forEachEdge((e, a) => { graph.setEdgeAttribute(e, 'color', a.originalColor); });
+    });
+
+    // === Capability Filter ===
+    document.getElementById('capabilityFilter').addEventListener('change', (e) => {
+        const cap = e.target.value;
+        graph.forEachNode((node, attrs) => {
+            if (cap === 'all' || attrs.capabilities.includes(cap)) {
+                graph.setNodeAttribute(node, 'color', attrs.originalColor);
+                graph.setNodeAttribute(node, 'hidden', false);
+            } else {
+                graph.setNodeAttribute(node, 'color', attrs.originalColor + '22');
+                graph.setNodeAttribute(node, 'hidden', true);
+            }
+        });
+        graph.forEachEdge((edge, attrs, source, target) => {
+            const sHidden = graph.getNodeAttribute(source, 'hidden');
+            const tHidden = graph.getNodeAttribute(target, 'hidden');
+            graph.setEdgeAttribute(edge, 'hidden', sHidden || tHidden);
+        });
+    });
+
+    // === Search ===
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+        const q = e.target.value.toLowerCase();
+        if (!q) {
+            graph.forEachNode((n, a) => { graph.setNodeAttribute(n, 'color', a.originalColor); });
+            graph.forEachEdge((e2, a) => { graph.setEdgeAttribute(e2, 'color', a.originalColor); });
+            return;
+        }
+        graph.forEachNode((n, a) => {
+            const match = a.label.toLowerCase().includes(q) || a.type.toLowerCase().includes(q);
+            graph.setNodeAttribute(n, 'color', match ? a.originalColor : a.originalColor + '22');
+        });
+    });
+
+    // === Reset ===
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        document.getElementById('capabilityFilter').value = 'all';
+        document.getElementById('searchInput').value = '';
+        document.getElementById('detailsPanel').classList.add('hidden');
+        graph.forEachNode((n, a) => {
+            graph.setNodeAttribute(n, 'color', a.originalColor);
+            graph.setNodeAttribute(n, 'hidden', false);
+        });
+        graph.forEachEdge((e2, a) => {
+            graph.setEdgeAttribute(e2, 'color', a.originalColor);
+            graph.setEdgeAttribute(e2, 'hidden', false);
+        });
+        renderer.getCamera().animatedReset();
+    });
+    </script>
+
+</body>
+</html>
