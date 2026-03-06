@@ -153,36 +153,40 @@ exceeded
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      Agent Communication Layer                   │
-│                                                                  │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐        │
-│  │ Agent A  │  │ Agent B  │  │ Agent C  │  │ Agent N  │        │
-│  │ (Claude) │  │ (Bot)    │  │ (Human)  │  │ (Any)    │        │
-│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘        │
-│       │             │             │             │               │
-│       └─────────────┴──────┬──────┴─────────────┘               │
-│                            │                                     │
-│                    ┌───────┴───────┐                            │
-│                    │  Coordinator  │                            │
-│                    │   (Hybrid     │                            │
-│                    │   Routing)    │                            │
-│                    └───────┬───────┘                            │
-│                            │                                     │
-│       ┌────────────────────┼────────────────────┐               │
-│       │                    │                    │               │
-│  ┌────┴─────┐        ┌────┴─────┐        ┌────┴─────┐         │
-│  │ SQLite   │        │  HTTP    │        │  File    │         │
-│  │Transport │        │Transport │        │Transport │         │
-│  │ (local)  │        │ (remote) │        │ (debug)  │         │
-│  └────┬─────┘        └────┬─────┘        └────┬─────┘         │
-│       │                   │                   │                │
-│       ▼                   ▼                   ▼                │
-│  coordination.db    HTTP Relay         ./inbox/*.json         │
-│                     Server                                     │
-└─────────────────────────────────────────────────────────────────┘
-```
+<div style="background: #0f172a; border-radius: 12px; padding: 24px; font-family: 'Inter', system-ui, sans-serif; color: #e2e8f0; max-width: 720px; box-shadow: 0 0 30px rgba(124, 58, 237, 0.15);">
+  <div style="text-align: center; font-size: 16px; font-weight: 700; color: #c4b5fd; margin-bottom: 20px;">Agent Communication Layer</div>
+  <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap;">
+    <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 8px; text-align: center; font-size: 12px; box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);">Agent A<br/><span style="opacity:0.7">Claude</span></div>
+    <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 8px; text-align: center; font-size: 12px; box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);">Agent B<br/><span style="opacity:0.7">Bot</span></div>
+    <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 8px; text-align: center; font-size: 12px; box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);">Agent C<br/><span style="opacity:0.7">Human</span></div>
+    <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 8px; text-align: center; font-size: 12px; box-shadow: 0 0 8px rgba(37, 99, 235, 0.4);">Agent N<br/><span style="opacity:0.7">Any</span></div>
+  </div>
+  <div style="text-align: center; font-size: 20px; color: #475569;">&#9661;</div>
+  <div style="display: flex; justify-content: center; margin: 8px 0;">
+    <div style="background: #7c3aed; color: #fff; padding: 12px 28px; border-radius: 10px; text-align: center; font-size: 14px; font-weight: 600; box-shadow: 0 0 14px rgba(124, 58, 237, 0.5);">Coordinator<br/><span style="font-weight: 400; font-size: 12px; opacity: 0.8;">Hybrid Routing</span></div>
+  </div>
+  <div style="text-align: center; font-size: 20px; color: #475569;">&#9661;</div>
+  <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 12px;">
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 130px;">
+      <div style="font-size: 13px; font-weight: 600; color: #0d9488;">SQLite Transport</div>
+      <div style="font-size: 11px; color: #64748b;">(local)</div>
+      <div style="font-size: 18px; color: #475569; margin: 4px 0;">&#9661;</div>
+      <div style="font-size: 11px; color: #f59e0b;">coordination.db</div>
+    </div>
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 130px;">
+      <div style="font-size: 13px; font-weight: 600; color: #ec4899;">HTTP Transport</div>
+      <div style="font-size: 11px; color: #64748b;">(remote)</div>
+      <div style="font-size: 18px; color: #475569; margin: 4px 0;">&#9661;</div>
+      <div style="font-size: 11px; color: #f59e0b;">HTTP Relay Server</div>
+    </div>
+    <div style="background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; text-align: center; min-width: 130px;">
+      <div style="font-size: 13px; font-weight: 600; color: #f59e0b;">File Transport</div>
+      <div style="font-size: 11px; color: #64748b;">(debug)</div>
+      <div style="font-size: 18px; color: #475569; margin: 4px 0;">&#9661;</div>
+      <div style="font-size: 11px; color: #f59e0b;">./inbox/*.json</div>
+    </div>
+  </div>
+</div>
 
 ### Component Responsibilities
 
@@ -526,14 +530,22 @@ A **bridge** connects external agent runtimes to the agent-comm message spool. I
 2. Forwards messages to the external runtime
 3. Captures responses and sends them back
 
-```
-┌─────────────────┐         ┌─────────────────┐         ┌─────────────────┐
-│  Message Spool  │ ──────► │     Bridge      │ ──────► │ External Agent  │
-│                 │ ◄────── │                 │ ◄────── │    Runtime      │
-└─────────────────┘         └─────────────────┘         └─────────────────┘
-      poll()                   forward()                    process()
-      send()                   capture()                    respond()
-```
+<table style="border-collapse: separate; border-spacing: 12px; background: #0f172a; border-radius: 12px; padding: 16px; font-family: 'Inter', system-ui, sans-serif; max-width: 700px;">
+  <tr>
+    <td style="background: #2563eb; color: #fff; padding: 14px 20px; border-radius: 8px; text-align: center; font-weight: 600; box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);">Message Spool</td>
+    <td style="color: #60a5fa; font-size: 24px; text-align: center; vertical-align: middle;">&#8644;</td>
+    <td style="background: #7c3aed; color: #fff; padding: 14px 20px; border-radius: 8px; text-align: center; font-weight: 600; box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);">Bridge</td>
+    <td style="color: #a78bfa; font-size: 24px; text-align: center; vertical-align: middle;">&#8644;</td>
+    <td style="background: #0d9488; color: #fff; padding: 14px 20px; border-radius: 8px; text-align: center; font-weight: 600; box-shadow: 0 0 10px rgba(13, 148, 136, 0.4);">External Agent<br/>Runtime</td>
+  </tr>
+  <tr>
+    <td style="color: #64748b; font-size: 11px; text-align: center;">poll() / send()</td>
+    <td></td>
+    <td style="color: #64748b; font-size: 11px; text-align: center;">forward() / capture()</td>
+    <td></td>
+    <td style="color: #64748b; font-size: 11px; text-align: center;">process() / respond()</td>
+  </tr>
+</table>
 
 ### Bridge Interface
 
@@ -669,13 +681,13 @@ Assistant: [Uses send_message tool with to="research-agent", body="What are the 
 
 All agents on one machine using SQLite transport:
 
-```
-┌──────────────────────────────────────┐
-│           Single Machine             │
-│                                      │
-│  Agent A ◄──► coordination.db ◄──► Agent B
-│                                      │
-└──────────────────────────────────────┘
+```mermaid
+graph LR
+    A["Agent A"] <--> DB[("coordination.db")] <--> B["Agent B"]
+
+    style A fill:#2563eb,stroke:#2563eb,color:#fff
+    style B fill:#2563eb,stroke:#2563eb,color:#fff
+    style DB fill:#f59e0b,stroke:#d97706,color:#000
 ```
 
 **Setup:**
@@ -688,16 +700,21 @@ python -m agent_comm register agent-b -c "..." -d local
 
 Agents on different machines using HTTP relay:
 
-```
-┌─────────────┐          ┌─────────────┐
-│   Machine A │          │   Machine B │
-│             │          │             │
-│   Agent A   │◄──HTTP──►│   Agent B   │
-│      │      │          │      │      │
-│      ▼      │          │      ▼      │
-│  local.db   │          │  relay.db   │
-└─────────────┘          └─────────────┘
-```
+<div style="display: flex; gap: 24px; justify-content: center; font-family: 'Inter', system-ui, sans-serif; max-width: 520px;">
+  <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; text-align: center; flex: 1; box-shadow: 0 0 12px rgba(37, 99, 235, 0.1);">
+    <div style="font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 10px;">Machine A</div>
+    <div style="background: #2563eb; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 8px;">Agent A</div>
+    <div style="color: #475569; font-size: 14px;">&#9661;</div>
+    <div style="background: #0f172a; color: #f59e0b; padding: 6px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #334155;">local.db</div>
+  </div>
+  <div style="display: flex; align-items: center; color: #ec4899; font-size: 14px; font-weight: 600;">&#8644; HTTP &#8644;</div>
+  <div style="background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 16px; text-align: center; flex: 1; box-shadow: 0 0 12px rgba(124, 58, 237, 0.1);">
+    <div style="font-size: 13px; font-weight: 600; color: #94a3b8; margin-bottom: 10px;">Machine B</div>
+    <div style="background: #7c3aed; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 8px;">Agent B</div>
+    <div style="color: #475569; font-size: 14px;">&#9661;</div>
+    <div style="background: #0f172a; color: #f59e0b; padding: 6px 10px; border-radius: 6px; font-size: 11px; border: 1px solid #334155;">relay.db</div>
+  </div>
+</div>
 
 **Setup:**
 
