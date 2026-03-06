@@ -47,8 +47,14 @@
                     <option value="research">Research</option>
                     <option value="tools">Tools</option>
                     <option value="routing">Routing</option>
-                    <option value="support">Support</option>
+                    <option value="review">Review</option>
+                    <option value="testing">Testing</option>
+                    <option value="memory">Memory</option>
                     <option value="monitoring">Monitoring</option>
+                    <option value="ooda">OODA</option>
+                    <option value="search">Search</option>
+                    <option value="security">Security</option>
+                    <option value="support">Support</option>
                     <option value="scheduling">Scheduling</option>
                 </select>
             </div>
@@ -100,12 +106,18 @@
                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#a855f7"></span> Coding Agent</div>
                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#10b981"></span> OpenClaw Bot</div>
                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#ec4899"></span> Clawdbot</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#3b82f6"></span> SPINE Agent</div>
                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#f59e0b"></span> Specialist</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#8b5cf6"></span> MCP Server</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#14b8a6"></span> Orchestrator</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#e879f9"></span> Memory System</div>
+                <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#ef4444"></span> Watchdog</div>
                 <div class="flex items-center gap-2"><span class="w-3 h-3 rounded-full inline-block" style="background:#0ea5e9"></span> Relay</div>
             </div>
             <div class="flex flex-wrap gap-6 text-sm mt-2 text-slate-500">
                 <div>Solid line = SQLite transport</div>
-                <div>Dashed line = HTTP transport</div>
+                <div>Dashed line = HTTP / MCP / Internal</div>
+                <div>Dotted line = Spawned process</div>
                 <div>Edge thickness = message volume</div>
                 <div>Drag nodes to rearrange | Scroll to zoom</div>
             </div>
@@ -120,31 +132,124 @@
 
     <script>
     // === Data ===
+    // === Type Colors ===
+    const typeColors = {
+        'coding-agent': '#a855f7',   // purple
+        'openclaw-bot': '#10b981',   // emerald
+        'clawdbot':     '#ec4899',   // pink
+        'spine':        '#3b82f6',   // blue
+        'specialist':   '#f59e0b',   // amber
+        'relay':        '#0ea5e9',   // sky
+        'mcp-server':   '#8b5cf6',   // violet
+        'orchestrator': '#14b8a6',   // teal
+        'memory':       '#e879f9',   // fuchsia
+        'watchdog':     '#ef4444',   // red
+    };
+
+    // === Data ===
     const nodesData = [
-        { id: 'claude-code', label: 'Claude Code', type: 'coding-agent', capabilities: ['code', 'review', 'debug', 'git'], device: 'windows-host', color: '#a855f7', radius: 28 },
-        { id: 'nelly', label: 'Nelly', type: 'openclaw-bot', capabilities: ['chat', 'research', 'tools', 'telegram'], device: 'wsl-nelly', color: '#10b981', radius: 32 },
-        { id: 'agatha', label: 'Agatha', type: 'clawdbot', capabilities: ['chat', 'whatsapp', 'tools'], device: 'wsl-ubuntu', color: '#ec4899', radius: 20 },
-        { id: 'hanna', label: 'Hanna', type: 'clawdbot', capabilities: ['chat', 'email', 'scheduling', 'tools'], device: 'wsl-ubuntu', color: '#f472b6', radius: 22 },
-        { id: 'cs-bot', label: 'CS-Bot', type: 'specialist', capabilities: ['chat', 'support', 'tickets', 'routing'], device: 'wsl-nelly', color: '#fb923c', radius: 20 },
-        { id: 'service-agent', label: 'Service Agent', type: 'specialist', capabilities: ['tools', 'monitoring', 'health', 'alerts'], device: 'wsl-nelly', color: '#facc15', radius: 22 },
-        { id: 'research-bot', label: 'Research Bot', type: 'specialist', capabilities: ['research', 'summarize', 'cite'], device: 'wsl-nelly', color: '#f59e0b', radius: 18 },
-        { id: 'gateway', label: 'Gateway', type: 'relay', capabilities: ['http-relay', 'auth', 'routing'], device: 'wsl-nelly', color: '#0ea5e9', radius: 24 }
+        // --- Core agents ---
+        { id: 'claude-code', label: 'Claude Code', type: 'coding-agent', capabilities: ['code', 'review', 'debug', 'git'], device: 'windows-host', color: typeColors['coding-agent'], radius: 30 },
+        { id: 'nelly', label: 'Nelly', type: 'openclaw-bot', capabilities: ['chat', 'research', 'tools', 'telegram'], device: 'wsl-nelly', color: typeColors['openclaw-bot'], radius: 34 },
+        { id: 'agatha', label: 'Agatha', type: 'clawdbot', capabilities: ['chat', 'whatsapp', 'tools'], device: 'wsl-ubuntu', color: typeColors['clawdbot'], radius: 20 },
+        { id: 'gateway', label: 'Gateway', type: 'relay', capabilities: ['http-relay', 'auth', 'routing'], device: 'wsl-nelly', color: typeColors['relay'], radius: 26 },
+
+        // --- SPINE agents ---
+        { id: 'hanna', label: 'Hanna', type: 'spine', capabilities: ['chat', 'email', 'scheduling', 'tools', 'ooda'], device: 'wsl-ubuntu', color: typeColors['spine'], radius: 24 },
+        { id: 'doc-gen', label: 'Doc Generator', type: 'spine', capabilities: ['code', 'docs', 'markdown'], device: 'spawned', color: typeColors['spine'], radius: 14 },
+        { id: 'code-reviewer', label: 'Code Reviewer', type: 'spine', capabilities: ['code', 'review', 'quality'], device: 'spawned', color: typeColors['spine'], radius: 14 },
+        { id: 'test-runner', label: 'Test Runner', type: 'spine', capabilities: ['code', 'testing', 'ci'], device: 'spawned', color: typeColors['spine'], radius: 13 },
+        { id: 'schema-validator', label: 'Schema Validator', type: 'spine', capabilities: ['tools', 'validation', 'contracts'], device: 'spawned', color: typeColors['spine'], radius: 12 },
+        { id: 'deploy-agent', label: 'Deploy Agent', type: 'spine', capabilities: ['tools', 'deploy', 'ci'], device: 'spawned', color: typeColors['spine'], radius: 13 },
+        { id: 'migration-agent', label: 'Migration Agent', type: 'spine', capabilities: ['code', 'database', 'migration'], device: 'spawned', color: typeColors['spine'], radius: 12 },
+        { id: 'refactor-agent', label: 'Refactor Agent', type: 'spine', capabilities: ['code', 'review', 'refactor'], device: 'spawned', color: typeColors['spine'], radius: 13 },
+        { id: 'audit-agent', label: 'Audit Agent', type: 'spine', capabilities: ['security', 'audit', 'compliance'], device: 'spawned', color: typeColors['spine'], radius: 12 },
+
+        // --- Specialists ---
+        { id: 'cs-bot', label: 'CS-Bot', type: 'specialist', capabilities: ['chat', 'support', 'tickets', 'routing'], device: 'wsl-nelly', color: typeColors['specialist'], radius: 20 },
+        { id: 'service-agent', label: 'Service Agent', type: 'specialist', capabilities: ['tools', 'monitoring', 'health', 'alerts'], device: 'wsl-nelly', color: typeColors['specialist'], radius: 20 },
+        { id: 'research-bot', label: 'Research Bot', type: 'specialist', capabilities: ['research', 'summarize', 'cite'], device: 'wsl-nelly', color: typeColors['specialist'], radius: 16 },
+
+        // --- MCP Servers (tool providers) ---
+        { id: 'mcp-minna', label: 'Minna Memory', type: 'mcp-server', capabilities: ['memory', 'search', 'entities'], device: 'wsl-nelly', color: typeColors['mcp-server'], radius: 16 },
+        { id: 'mcp-ie', label: 'Intelligence Engine', type: 'mcp-server', capabilities: ['code', 'search', 'knowledge-graph'], device: 'wsl-nelly', color: typeColors['mcp-server'], radius: 18 },
+        { id: 'mcp-comm', label: 'Agent Comm', type: 'mcp-server', capabilities: ['routing', 'messaging'], device: 'wsl-nelly', color: typeColors['mcp-server'], radius: 16 },
+
+        // --- Orchestrator ---
+        { id: 'task-orchestrator', label: 'Task Orchestrator', type: 'orchestrator', capabilities: ['routing', 'scheduling', 'ooda'], device: 'wsl-nelly', color: typeColors['orchestrator'], radius: 22 },
+
+        // --- Memory system ---
+        { id: 'episodic-mem', label: 'Episodic Memory', type: 'memory', capabilities: ['memory', 'recall', 'embeddings'], device: 'wsl-nelly', color: typeColors['memory'], radius: 14 },
+        { id: 'vector-store', label: 'Vector Store', type: 'memory', capabilities: ['memory', 'search', 'embeddings'], device: 'wsl-nelly', color: typeColors['memory'], radius: 14 },
+
+        // --- Watchdog ---
+        { id: 'circuit-breaker', label: 'Circuit Breaker', type: 'watchdog', capabilities: ['monitoring', 'health', 'alerts', 'safety'], device: 'wsl-nelly', color: typeColors['watchdog'], radius: 16 },
     ];
 
     const linksData = [
+        // Core agent mesh
         { source: 'claude-code', target: 'nelly', transport: 'sqlite', messages: 847, color: '#6366f1' },
         { source: 'claude-code', target: 'agatha', transport: 'sqlite', messages: 23, color: '#6366f1' },
-        { source: 'claude-code', target: 'hanna', transport: 'sqlite', messages: 64, color: '#6366f1' },
+        { source: 'claude-code', target: 'hanna', transport: 'sqlite', messages: 164, color: '#6366f1' },
+        { source: 'nelly', target: 'agatha', transport: 'sqlite', messages: 156, color: '#6366f1' },
+        { source: 'nelly', target: 'hanna', transport: 'sqlite', messages: 289, color: '#6366f1' },
         { source: 'nelly', target: 'gateway', transport: 'http', messages: 1250, color: '#f59e0b' },
-        { source: 'nelly', target: 'cs-bot', transport: 'sqlite', messages: 430, color: '#6366f1' },
-        { source: 'nelly', target: 'service-agent', transport: 'sqlite', messages: 215, color: '#6366f1' },
-        { source: 'nelly', target: 'hanna', transport: 'sqlite', messages: 189, color: '#6366f1' },
+        { source: 'hanna', target: 'agatha', transport: 'sqlite', messages: 37, color: '#6366f1' },
+
+        // Gateway routes
         { source: 'gateway', target: 'research-bot', transport: 'http', messages: 312, color: '#f59e0b' },
         { source: 'gateway', target: 'cs-bot', transport: 'http', messages: 578, color: '#f59e0b' },
         { source: 'gateway', target: 'service-agent', transport: 'http', messages: 146, color: '#f59e0b' },
-        { source: 'nelly', target: 'agatha', transport: 'sqlite', messages: 156, color: '#6366f1' },
-        { source: 'hanna', target: 'agatha', transport: 'sqlite', messages: 37, color: '#6366f1' },
-        { source: 'cs-bot', target: 'service-agent', transport: 'sqlite', messages: 92, color: '#6366f1' }
+
+        // Specialist interconnects
+        { source: 'nelly', target: 'cs-bot', transport: 'sqlite', messages: 430, color: '#6366f1' },
+        { source: 'nelly', target: 'service-agent', transport: 'sqlite', messages: 215, color: '#6366f1' },
+        { source: 'cs-bot', target: 'service-agent', transport: 'sqlite', messages: 92, color: '#6366f1' },
+
+        // SPINE spawned agents — Hanna orchestrates them
+        { source: 'hanna', target: 'doc-gen', transport: 'spawn', messages: 88, color: '#3b82f1' },
+        { source: 'hanna', target: 'code-reviewer', transport: 'spawn', messages: 124, color: '#3b82f1' },
+        { source: 'hanna', target: 'test-runner', transport: 'spawn', messages: 203, color: '#3b82f1' },
+        { source: 'hanna', target: 'schema-validator', transport: 'spawn', messages: 56, color: '#3b82f1' },
+        { source: 'hanna', target: 'deploy-agent', transport: 'spawn', messages: 34, color: '#3b82f1' },
+        { source: 'hanna', target: 'audit-agent', transport: 'spawn', messages: 41, color: '#3b82f1' },
+
+        // Claude Code also spawns SPINE agents directly
+        { source: 'claude-code', target: 'code-reviewer', transport: 'spawn', messages: 310, color: '#3b82f1' },
+        { source: 'claude-code', target: 'test-runner', transport: 'spawn', messages: 185, color: '#3b82f1' },
+        { source: 'claude-code', target: 'refactor-agent', transport: 'spawn', messages: 72, color: '#3b82f1' },
+        { source: 'claude-code', target: 'migration-agent', transport: 'spawn', messages: 28, color: '#3b82f1' },
+        { source: 'claude-code', target: 'doc-gen', transport: 'spawn', messages: 95, color: '#3b82f1' },
+
+        // SPINE agents talk to each other
+        { source: 'code-reviewer', target: 'test-runner', transport: 'spawn', messages: 67, color: '#3b82f1' },
+        { source: 'deploy-agent', target: 'test-runner', transport: 'spawn', messages: 45, color: '#3b82f1' },
+        { source: 'refactor-agent', target: 'code-reviewer', transport: 'spawn', messages: 31, color: '#3b82f1' },
+        { source: 'audit-agent', target: 'schema-validator', transport: 'spawn', messages: 19, color: '#3b82f1' },
+
+        // MCP server connections
+        { source: 'claude-code', target: 'mcp-minna', transport: 'mcp', messages: 520, color: '#8b5cf6' },
+        { source: 'claude-code', target: 'mcp-ie', transport: 'mcp', messages: 340, color: '#8b5cf6' },
+        { source: 'claude-code', target: 'mcp-comm', transport: 'mcp', messages: 890, color: '#8b5cf6' },
+        { source: 'nelly', target: 'mcp-minna', transport: 'mcp', messages: 275, color: '#8b5cf6' },
+        { source: 'nelly', target: 'mcp-comm', transport: 'mcp', messages: 890, color: '#8b5cf6' },
+        { source: 'hanna', target: 'mcp-minna', transport: 'mcp', messages: 130, color: '#8b5cf6' },
+
+        // Orchestrator
+        { source: 'task-orchestrator', target: 'hanna', transport: 'sqlite', messages: 415, color: '#6366f1' },
+        { source: 'task-orchestrator', target: 'nelly', transport: 'sqlite', messages: 380, color: '#6366f1' },
+        { source: 'task-orchestrator', target: 'cs-bot', transport: 'sqlite', messages: 210, color: '#6366f1' },
+        { source: 'task-orchestrator', target: 'circuit-breaker', transport: 'sqlite', messages: 150, color: '#6366f1' },
+
+        // Memory system
+        { source: 'mcp-minna', target: 'episodic-mem', transport: 'internal', messages: 1840, color: '#e879f9' },
+        { source: 'mcp-minna', target: 'vector-store', transport: 'internal', messages: 960, color: '#e879f9' },
+        { source: 'mcp-ie', target: 'vector-store', transport: 'internal', messages: 720, color: '#e879f9' },
+
+        // Watchdog
+        { source: 'circuit-breaker', target: 'service-agent', transport: 'sqlite', messages: 340, color: '#ef4444' },
+        { source: 'circuit-breaker', target: 'gateway', transport: 'http', messages: 180, color: '#ef4444' },
+        { source: 'circuit-breaker', target: 'deploy-agent', transport: 'spawn', messages: 65, color: '#ef4444' },
     ];
 
     // === D3 Setup ===
@@ -174,10 +279,12 @@
 
     // Force simulation
     const simulation = d3.forceSimulation(nodesData)
-        .force('link', d3.forceLink(linksData).id(d => d.id).distance(160))
-        .force('charge', d3.forceManyBody().strength(-600))
+        .force('link', d3.forceLink(linksData).id(d => d.id).distance(120).strength(0.4))
+        .force('charge', d3.forceManyBody().strength(-450))
         .force('center', d3.forceCenter(width / 2, height / 2))
-        .force('collision', d3.forceCollide().radius(d => d.radius + 20));
+        .force('collision', d3.forceCollide().radius(d => d.radius + 14))
+        .force('x', d3.forceX(width / 2).strength(0.04))
+        .force('y', d3.forceY(height / 2).strength(0.04));
 
     // === Draw Edges ===
     const edgeGroup = g.append('g').attr('class', 'edges');
@@ -188,7 +295,13 @@
         .attr('stroke', d => d.color)
         .attr('stroke-opacity', 0.6)
         .attr('stroke-width', d => Math.max(2, Math.log(d.messages) * 1.5))
-        .attr('stroke-dasharray', d => d.transport === 'http' ? '10,6' : null);
+        .attr('stroke-dasharray', d => {
+            if (d.transport === 'http') return '10,6';
+            if (d.transport === 'spawn') return '4,4';
+            if (d.transport === 'mcp') return '12,4,4,4';
+            if (d.transport === 'internal') return '2,3';
+            return null;
+        });
 
     // Edge labels (message counts)
     const edgeLabelGroup = g.append('g').attr('class', 'edge-labels');
