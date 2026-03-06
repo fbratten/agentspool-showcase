@@ -5,12 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent Network Graph - agentspool Demo</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; margin: 0; }
-        #graph-canvas { width: 100%; height: 600px; background: #0f172a; border-radius: 0.75rem; cursor: grab; display: block; }
-        #graph-canvas:active { cursor: grabbing; }
+        #graph-container { width: 100%; height: 600px; background: #0f172a; border-radius: 0.75rem; position: relative; overflow: hidden; }
+        #graph-container svg { width: 100%; height: 100%; }
         .agent-badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; }
+        .node-group { cursor: pointer; }
+        .node-group:hover .node-glow { opacity: 0.5; }
+        .edge-label-bg { fill: #0f172a; }
+        .edge-label-text { fill: #94a3b8; font: 600 10px 'Inter', sans-serif; }
+        .node-label { fill: #e2e8f0; font: 600 13px 'Inter', sans-serif; pointer-events: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -52,8 +58,10 @@
             </div>
         </div>
 
-        <!-- Graph Canvas -->
-        <canvas id="graph-canvas"></canvas>
+        <!-- Graph -->
+        <div id="graph-container">
+            <svg></svg>
+        </div>
 
         <!-- Agent Details Panel -->
         <div id="detailsPanel" class="mt-6 bg-white border border-slate-200 rounded-xl p-6 hidden">
@@ -96,7 +104,7 @@
                 <div>Solid line = SQLite transport</div>
                 <div>Dashed line = HTTP transport</div>
                 <div>Edge thickness = message volume</div>
-                <div>Click node for details | Drag to move</div>
+                <div>Drag nodes to rearrange | Scroll to zoom</div>
             </div>
         </div>
 
@@ -109,15 +117,15 @@
 
     <script>
     // === Data ===
-    const agents = [
-        { id: 'claude-code', label: 'Claude Code', type: 'coding-agent', capabilities: ['code', 'review', 'debug', 'git'], device: 'windows-host', color: '#a855f7', size: 28 },
-        { id: 'nelly', label: 'Nelly', type: 'openclaw-bot', capabilities: ['chat', 'research', 'tools', 'telegram'], device: 'wsl-nelly', color: '#10b981', size: 32 },
-        { id: 'agatha', label: 'Agatha', type: 'clawdbot', capabilities: ['chat', 'whatsapp', 'tools'], device: 'wsl-ubuntu', color: '#ec4899', size: 20 },
-        { id: 'research-bot', label: 'Research Bot', type: 'specialist', capabilities: ['research', 'summarize', 'cite'], device: 'wsl-nelly', color: '#f59e0b', size: 18 },
-        { id: 'gateway', label: 'Gateway', type: 'relay', capabilities: ['http-relay', 'auth', 'routing'], device: 'wsl-nelly', color: '#0ea5e9', size: 24 }
+    const nodesData = [
+        { id: 'claude-code', label: 'Claude Code', type: 'coding-agent', capabilities: ['code', 'review', 'debug', 'git'], device: 'windows-host', color: '#a855f7', radius: 28 },
+        { id: 'nelly', label: 'Nelly', type: 'openclaw-bot', capabilities: ['chat', 'research', 'tools', 'telegram'], device: 'wsl-nelly', color: '#10b981', radius: 32 },
+        { id: 'agatha', label: 'Agatha', type: 'clawdbot', capabilities: ['chat', 'whatsapp', 'tools'], device: 'wsl-ubuntu', color: '#ec4899', radius: 20 },
+        { id: 'research-bot', label: 'Research Bot', type: 'specialist', capabilities: ['research', 'summarize', 'cite'], device: 'wsl-nelly', color: '#f59e0b', radius: 18 },
+        { id: 'gateway', label: 'Gateway', type: 'relay', capabilities: ['http-relay', 'auth', 'routing'], device: 'wsl-nelly', color: '#0ea5e9', radius: 24 }
     ];
 
-    const links = [
+    const linksData = [
         { source: 'claude-code', target: 'nelly', transport: 'sqlite', messages: 847, color: '#6366f1' },
         { source: 'claude-code', target: 'agatha', transport: 'sqlite', messages: 23, color: '#6366f1' },
         { source: 'nelly', target: 'gateway', transport: 'http', messages: 1250, color: '#f59e0b' },
@@ -125,322 +133,270 @@
         { source: 'nelly', target: 'agatha', transport: 'sqlite', messages: 156, color: '#6366f1' }
     ];
 
-    // === Canvas Setup ===
-    const canvas = document.getElementById('graph-canvas');
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
+    // === D3 Setup ===
+    const container = document.getElementById('graph-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
 
-    function resize() {
-        const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-    resize();
-    window.addEventListener('resize', () => { resize(); draw(); });
+    const svg = d3.select('#graph-container svg')
+        .attr('viewBox', [0, 0, width, height]);
 
-    // === Node positions (force-directed init) ===
-    const W = canvas.getBoundingClientRect().width;
-    const H = canvas.getBoundingClientRect().height;
-    const nodeMap = {};
+    // Defs for glow filter and arrow markers
+    const defs = svg.append('defs');
 
-    // Place in a circle initially
-    agents.forEach((a, i) => {
-        const angle = (2 * Math.PI * i) / agents.length - Math.PI / 2;
-        const rx = W * 0.3;
-        const ry = H * 0.3;
-        nodeMap[a.id] = {
-            ...a,
-            x: W / 2 + rx * Math.cos(angle),
-            y: H / 2 + ry * Math.sin(angle),
-            vx: 0, vy: 0,
-            visible: true,
-            highlight: 1.0
-        };
-    });
+    // Glow filter
+    const filter = defs.append('filter').attr('id', 'glow');
+    filter.append('feGaussianBlur').attr('stdDeviation', '6').attr('result', 'coloredBlur');
+    const feMerge = filter.append('feMerge');
+    feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+    feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
 
-    // Simple force-directed layout (runs once at startup)
-    function forceLayout(iterations) {
-        for (let iter = 0; iter < iterations; iter++) {
-            // Repulsion between all nodes
-            const nodes = Object.values(nodeMap);
-            for (let i = 0; i < nodes.length; i++) {
-                for (let j = i + 1; j < nodes.length; j++) {
-                    let dx = nodes[j].x - nodes[i].x;
-                    let dy = nodes[j].y - nodes[i].y;
-                    let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                    let force = 8000 / (dist * dist);
-                    let fx = (dx / dist) * force;
-                    let fy = (dy / dist) * force;
-                    nodes[i].vx -= fx;
-                    nodes[i].vy -= fy;
-                    nodes[j].vx += fx;
-                    nodes[j].vy += fy;
-                }
-            }
-            // Attraction along edges
-            links.forEach(l => {
-                const s = nodeMap[l.source];
-                const t = nodeMap[l.target];
-                let dx = t.x - s.x;
-                let dy = t.y - s.y;
-                let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-                let force = (dist - 150) * 0.01;
-                let fx = (dx / dist) * force;
-                let fy = (dy / dist) * force;
-                s.vx += fx;
-                s.vy += fy;
-                t.vx -= fx;
-                t.vy -= fy;
-            });
-            // Center gravity
-            nodes.forEach(n => {
-                n.vx += (W / 2 - n.x) * 0.002;
-                n.vy += (H / 2 - n.y) * 0.002;
-                n.x += n.vx * 0.5;
-                n.y += n.vy * 0.5;
-                n.vx *= 0.85;
-                n.vy *= 0.85;
-                // Keep in bounds
-                n.x = Math.max(60, Math.min(W - 60, n.x));
-                n.y = Math.max(60, Math.min(H - 60, n.y));
-            });
-        }
-    }
-    forceLayout(200);
+    // Zoom
+    const g = svg.append('g');
+    const zoom = d3.zoom()
+        .scaleExtent([0.3, 4])
+        .on('zoom', (event) => g.attr('transform', event.transform));
+    svg.call(zoom);
 
-    // === Drawing ===
-    let selectedNode = null;
-    let hoveredNode = null;
+    // Force simulation
+    const simulation = d3.forceSimulation(nodesData)
+        .force('link', d3.forceLink(linksData).id(d => d.id).distance(160))
+        .force('charge', d3.forceManyBody().strength(-600))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(d => d.radius + 20));
 
-    function draw() {
-        const w = canvas.getBoundingClientRect().width;
-        const h = canvas.getBoundingClientRect().height;
-        ctx.clearRect(0, 0, w, h);
+    // === Draw Edges ===
+    const edgeGroup = g.append('g').attr('class', 'edges');
 
-        // Draw edges
-        links.forEach(l => {
-            const s = nodeMap[l.source];
-            const t = nodeMap[l.target];
-            if (!s.visible || !t.visible) return;
+    const edgeLine = edgeGroup.selectAll('line')
+        .data(linksData)
+        .join('line')
+        .attr('stroke', d => d.color)
+        .attr('stroke-opacity', 0.6)
+        .attr('stroke-width', d => Math.max(2, Math.log(d.messages) * 1.5))
+        .attr('stroke-dasharray', d => d.transport === 'http' ? '10,6' : null);
 
-            const edgeHighlight = selectedNode
-                ? (l.source === selectedNode || l.target === selectedNode ? 1.0 : 0.12)
-                : 1.0;
-            const thickness = Math.max(2, Math.log(l.messages) * 1.2);
+    // Edge labels (message counts)
+    const edgeLabelGroup = g.append('g').attr('class', 'edge-labels');
 
-            ctx.save();
-            ctx.globalAlpha = edgeHighlight;
-            ctx.strokeStyle = l.color;
-            ctx.lineWidth = thickness;
+    const edgeLabelBg = edgeLabelGroup.selectAll('rect')
+        .data(linksData)
+        .join('rect')
+        .attr('class', 'edge-label-bg')
+        .attr('rx', 4).attr('ry', 4)
+        .attr('height', 18);
 
-            if (l.transport === 'http') {
-                ctx.setLineDash([8, 6]);
-            } else {
-                ctx.setLineDash([]);
-            }
+    const edgeLabelText = edgeLabelGroup.selectAll('text')
+        .data(linksData)
+        .join('text')
+        .attr('class', 'edge-label-text')
+        .attr('text-anchor', 'middle')
+        .attr('dominant-baseline', 'central')
+        .text(d => d.messages.toLocaleString());
 
-            ctx.beginPath();
-            ctx.moveTo(s.x, s.y);
-            ctx.lineTo(t.x, t.y);
-            ctx.stroke();
+    // Measure label widths for background pills
+    edgeLabelText.each(function(d) { d._labelWidth = this.getComputedTextLength() + 12; });
 
-            // Message count label at midpoint
-            if (edgeHighlight > 0.5) {
-                const mx = (s.x + t.x) / 2;
-                const my = (s.y + t.y) / 2;
-                ctx.setLineDash([]);
-                ctx.font = '600 11px Inter, system-ui, sans-serif';
-                ctx.fillStyle = '#94a3b8';
-                ctx.globalAlpha = edgeHighlight * 0.8;
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
+    // === Draw Nodes ===
+    const nodeGroup = g.append('g').attr('class', 'nodes');
 
-                // Background pill
-                const text = l.messages.toLocaleString();
-                const tw = ctx.measureText(text).width + 10;
-                ctx.fillStyle = '#0f172a';
-                ctx.beginPath();
-                ctx.roundRect(mx - tw / 2, my - 9, tw, 18, 4);
-                ctx.fill();
-                ctx.fillStyle = '#94a3b8';
-                ctx.fillText(text, mx, my);
-            }
+    const node = nodeGroup.selectAll('g')
+        .data(nodesData)
+        .join('g')
+        .attr('class', 'node-group')
+        .call(d3.drag()
+            .on('start', dragStarted)
+            .on('drag', dragged)
+            .on('end', dragEnded));
 
-            ctx.restore();
-        });
+    // Glow circle (hidden until hover/select)
+    node.append('circle')
+        .attr('class', 'node-glow')
+        .attr('r', d => d.radius + 8)
+        .attr('fill', d => d.color)
+        .attr('opacity', 0)
+        .attr('filter', 'url(#glow)');
 
-        // Draw nodes
-        Object.values(nodeMap).forEach(n => {
-            if (!n.visible) return;
+    // Main circle
+    node.append('circle')
+        .attr('class', 'node-circle')
+        .attr('r', d => d.radius)
+        .attr('fill', d => d.color)
+        .attr('stroke', 'rgba(255,255,255,0.12)')
+        .attr('stroke-width', 2);
 
-            const nodeHighlight = selectedNode
-                ? (n.id === selectedNode ? 1.0
-                    : links.some(l => (l.source === selectedNode && l.target === n.id) || (l.target === selectedNode && l.source === n.id)) ? 0.85 : 0.15)
-                : n.highlight;
-
-            ctx.save();
-            ctx.globalAlpha = nodeHighlight;
-
-            // Glow
-            if (n.id === hoveredNode || n.id === selectedNode) {
-                ctx.shadowColor = n.color;
-                ctx.shadowBlur = 20;
-            }
-
-            // Circle
-            ctx.beginPath();
-            ctx.arc(n.x, n.y, n.size, 0, Math.PI * 2);
-            ctx.fillStyle = n.color;
-            ctx.fill();
-
-            // Border
-            ctx.strokeStyle = '#ffffff22';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            ctx.shadowBlur = 0;
-
-            // Label
-            ctx.font = '600 13px Inter, system-ui, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'top';
-            ctx.fillStyle = '#e2e8f0';
-            ctx.globalAlpha = nodeHighlight * 0.95;
-            ctx.fillText(n.label, n.x, n.y + n.size + 6);
-
-            ctx.restore();
-        });
-    }
-
-    draw();
+    // Node label
+    node.append('text')
+        .attr('class', 'node-label')
+        .attr('text-anchor', 'middle')
+        .attr('dy', d => d.radius + 18)
+        .text(d => d.label);
 
     // === Interaction ===
-    function getNodeAt(mx, my) {
-        const rect = canvas.getBoundingClientRect();
-        const x = mx - rect.left;
-        const y = my - rect.top;
-        let closest = null;
-        let closestDist = Infinity;
-        Object.values(nodeMap).forEach(n => {
-            if (!n.visible) return;
-            const dx = n.x - x;
-            const dy = n.y - y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < n.size + 8 && dist < closestDist) {
-                closest = n;
-                closestDist = dist;
-            }
+    let selectedNode = null;
+
+    node.on('click', function(event, d) {
+        event.stopPropagation();
+        selectedNode = d.id;
+        highlightNetwork(d.id);
+        showDetails(d);
+    });
+
+    svg.on('click', () => {
+        selectedNode = null;
+        resetHighlight();
+        document.getElementById('detailsPanel').classList.add('hidden');
+    });
+
+    node.on('mouseenter', function(event, d) {
+        d3.select(this).select('.node-glow').transition().duration(200).attr('opacity', 0.5);
+    }).on('mouseleave', function(event, d) {
+        if (d.id !== selectedNode) {
+            d3.select(this).select('.node-glow').transition().duration(200).attr('opacity', 0);
+        }
+    });
+
+    function highlightNetwork(nodeId) {
+        const connectedIds = new Set([nodeId]);
+        linksData.forEach(l => {
+            const sid = typeof l.source === 'object' ? l.source.id : l.source;
+            const tid = typeof l.target === 'object' ? l.target.id : l.target;
+            if (sid === nodeId) connectedIds.add(tid);
+            if (tid === nodeId) connectedIds.add(sid);
         });
-        return closest;
+
+        node.transition().duration(300)
+            .attr('opacity', d => connectedIds.has(d.id) ? 1 : 0.15);
+
+        node.select('.node-glow')
+            .transition().duration(300)
+            .attr('opacity', d => d.id === nodeId ? 0.6 : 0);
+
+        edgeLine.transition().duration(300)
+            .attr('stroke-opacity', d => {
+                const sid = typeof d.source === 'object' ? d.source.id : d.source;
+                const tid = typeof d.target === 'object' ? d.target.id : d.target;
+                return (sid === nodeId || tid === nodeId) ? 0.9 : 0.06;
+            });
+
+        edgeLabelBg.transition().duration(300)
+            .attr('opacity', d => {
+                const sid = typeof d.source === 'object' ? d.source.id : d.source;
+                const tid = typeof d.target === 'object' ? d.target.id : d.target;
+                return (sid === nodeId || tid === nodeId) ? 1 : 0.06;
+            });
+
+        edgeLabelText.transition().duration(300)
+            .attr('opacity', d => {
+                const sid = typeof d.source === 'object' ? d.source.id : d.source;
+                const tid = typeof d.target === 'object' ? d.target.id : d.target;
+                return (sid === nodeId || tid === nodeId) ? 1 : 0.06;
+            });
     }
 
-    canvas.addEventListener('mousemove', (e) => {
-        const node = getNodeAt(e.clientX, e.clientY);
-        hoveredNode = node ? node.id : null;
-        canvas.style.cursor = node ? 'pointer' : 'grab';
-        draw();
-    });
+    function resetHighlight() {
+        node.transition().duration(300).attr('opacity', 1);
+        node.select('.node-glow').transition().duration(300).attr('opacity', 0);
+        edgeLine.transition().duration(300).attr('stroke-opacity', 0.6);
+        edgeLabelBg.transition().duration(300).attr('opacity', 1);
+        edgeLabelText.transition().duration(300).attr('opacity', 1);
+    }
 
-    canvas.addEventListener('click', (e) => {
-        const node = getNodeAt(e.clientX, e.clientY);
-        if (node) {
-            selectedNode = node.id;
-            showDetails(node);
-        } else {
-            selectedNode = null;
-            document.getElementById('detailsPanel').classList.add('hidden');
-        }
-        draw();
-    });
-
-    // Drag support
-    let dragging = null;
-    let dragOffset = { x: 0, y: 0 };
-
-    canvas.addEventListener('mousedown', (e) => {
-        const node = getNodeAt(e.clientX, e.clientY);
-        if (node) {
-            dragging = node;
-            const rect = canvas.getBoundingClientRect();
-            dragOffset.x = node.x - (e.clientX - rect.left);
-            dragOffset.y = node.y - (e.clientY - rect.top);
-            canvas.style.cursor = 'grabbing';
-        }
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-        if (dragging) {
-            const rect = canvas.getBoundingClientRect();
-            dragging.x = e.clientX - rect.left + dragOffset.x;
-            dragging.y = e.clientY - rect.top + dragOffset.y;
-            draw();
-        }
-    });
-
-    canvas.addEventListener('mouseup', () => { dragging = null; });
-    canvas.addEventListener('mouseleave', () => { dragging = null; hoveredNode = null; draw(); });
-
-    function showDetails(node) {
+    function showDetails(d) {
         const panel = document.getElementById('detailsPanel');
         panel.classList.remove('hidden');
-        document.getElementById('detailName').textContent = node.label;
-        document.getElementById('detailType').textContent = node.type;
-        document.getElementById('detailDevice').textContent = node.device;
+        document.getElementById('detailName').textContent = d.label;
+        document.getElementById('detailType').textContent = d.type;
+        document.getElementById('detailDevice').textContent = d.device;
 
         let totalMessages = 0;
         const connections = [];
-        links.forEach(l => {
-            if (l.source === node.id || l.target === node.id) {
+        linksData.forEach(l => {
+            const sid = typeof l.source === 'object' ? l.source.id : l.source;
+            const tid = typeof l.target === 'object' ? l.target.id : l.target;
+            if (sid === d.id || tid === d.id) {
                 totalMessages += l.messages;
-                const peerId = l.source === node.id ? l.target : l.source;
-                connections.push({ label: nodeMap[peerId].label, messages: l.messages, transport: l.transport });
+                const peerId = sid === d.id ? tid : sid;
+                const peer = nodesData.find(n => n.id === peerId);
+                connections.push({ label: peer.label, messages: l.messages, transport: l.transport });
             }
         });
         document.getElementById('detailMessages').textContent = totalMessages.toLocaleString();
-
-        document.getElementById('detailCapabilities').innerHTML = node.capabilities.map(c =>
+        document.getElementById('detailCapabilities').innerHTML = d.capabilities.map(c =>
             `<span class="agent-badge bg-slate-100 text-slate-700">${c}</span>`
         ).join('');
-
         document.getElementById('detailConnections').innerHTML = connections.map(c =>
             `<span class="agent-badge bg-emerald-50 text-emerald-700">${c.label} (${c.messages} via ${c.transport})</span>`
         ).join('');
     }
 
-    // === Filters ===
+    // === Drag ===
+    function dragStarted(event, d) {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x; d.fy = d.y;
+    }
+    function dragged(event, d) {
+        d.fx = event.x; d.fy = event.y;
+    }
+    function dragEnded(event, d) {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null; d.fy = null;
+    }
+
+    // === Tick ===
+    simulation.on('tick', () => {
+        edgeLine
+            .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+            .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+
+        edgeLabelBg
+            .attr('x', d => (d.source.x + d.target.x) / 2 - (d._labelWidth || 30) / 2)
+            .attr('y', d => (d.source.y + d.target.y) / 2 - 9)
+            .attr('width', d => d._labelWidth || 30);
+
+        edgeLabelText
+            .attr('x', d => (d.source.x + d.target.x) / 2)
+            .attr('y', d => (d.source.y + d.target.y) / 2);
+
+        node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    // === Capability Filter ===
     document.getElementById('capabilityFilter').addEventListener('change', (e) => {
         const cap = e.target.value;
-        Object.values(nodeMap).forEach(n => {
-            n.visible = (cap === 'all' || n.capabilities.includes(cap));
-            n.highlight = n.visible ? 1.0 : 0.15;
-        });
         selectedNode = null;
         document.getElementById('detailsPanel').classList.add('hidden');
-        draw();
+
+        node.transition().duration(300)
+            .attr('opacity', d => (cap === 'all' || d.capabilities.includes(cap)) ? 1 : 0.1);
+
+        edgeLine.transition().duration(300)
+            .attr('stroke-opacity', d => {
+                const s = nodesData.find(n => n.id === (typeof d.source === 'object' ? d.source.id : d.source));
+                const t = nodesData.find(n => n.id === (typeof d.target === 'object' ? d.target.id : d.target));
+                const sVis = cap === 'all' || s.capabilities.includes(cap);
+                const tVis = cap === 'all' || t.capabilities.includes(cap);
+                return (sVis && tVis) ? 0.6 : 0.04;
+            });
     });
 
+    // === Search ===
     document.getElementById('searchInput').addEventListener('input', (e) => {
         const q = e.target.value.toLowerCase();
-        Object.values(nodeMap).forEach(n => {
-            if (!q) {
-                n.highlight = 1.0;
-            } else {
-                const match = n.label.toLowerCase().includes(q) || n.type.toLowerCase().includes(q);
-                n.highlight = match ? 1.0 : 0.15;
-            }
-        });
-        draw();
+        if (!q) { resetHighlight(); return; }
+
+        node.transition().duration(200)
+            .attr('opacity', d => (d.label.toLowerCase().includes(q) || d.type.toLowerCase().includes(q)) ? 1 : 0.12);
     });
 
+    // === Reset ===
     document.getElementById('resetBtn').addEventListener('click', () => {
         document.getElementById('capabilityFilter').value = 'all';
         document.getElementById('searchInput').value = '';
         document.getElementById('detailsPanel').classList.add('hidden');
         selectedNode = null;
-        hoveredNode = null;
-        Object.values(nodeMap).forEach(n => { n.visible = true; n.highlight = 1.0; });
-        draw();
+        resetHighlight();
+        svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity);
     });
     </script>
 
