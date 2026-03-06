@@ -46,10 +46,14 @@ Coding Agent and OpenClaw gateway agents operate in different contexts:
 
 By default, communication is **one-way only**:
 
-```
-Coding Agent → OpenClaw Agent ✅  (via `wsl -d <instance> -e openclaw agent --message "..."`)
-OpenClaw Agent → Coding Agent ❌  (no mechanism)
-```
+<div style="font-family: 'Inter', system-ui, sans-serif; max-width: 520px; margin: 1em auto; display: flex; align-items: center; gap: 16px; justify-content: center;">
+  <div style="background: #2563eb; color: #fff; font-weight: 600; padding: 10px 18px; border-radius: 8px; font-size: 13px;">Coding Agent</div>
+  <div style="text-align: center; font-size: 12px;">
+    <div style="color: #22c55e;">&#10140; wsl -d ... openclaw agent</div>
+    <div style="color: #ef4444; text-decoration: line-through; opacity: 0.6;">&#10140; no mechanism</div>
+  </div>
+  <div style="background: #0d9488; color: #fff; font-weight: 600; padding: 10px 18px; border-radius: 8px; font-size: 13px;">OpenClaw Agent</div>
+</div>
 
 ### The Solution
 
@@ -62,41 +66,43 @@ OpenClaw Agent → Coding Agent ❌  (no mechanism)
 
 This enables **true bidirectional communication**:
 
-```
-Coding Agent ←→ Message Spool ←→ OpenClaw Agent
-     ↓              ↓              ↓
-   send()      coordination.db   poll()
-   poll()                        send()
-```
+<div style="font-family: 'Inter', system-ui, sans-serif; max-width: 580px; margin: 1em auto; display: flex; align-items: center; gap: 12px; justify-content: center;">
+  <div style="background: #2563eb; color: #fff; font-weight: 600; padding: 12px 16px; border-radius: 8px; font-size: 13px; text-align: center;">Coding Agent<br><span style="font-weight: 400; font-size: 11px; opacity: 0.8;">send() / poll()</span></div>
+  <div style="color: #22c55e; font-size: 20px;">&#8644;</div>
+  <div style="background: #f59e0b; color: #000; font-weight: 600; padding: 12px 16px; border-radius: 8px; font-size: 13px; text-align: center;">Message Spool<br><span style="font-weight: 400; font-size: 11px;">coordination.db</span></div>
+  <div style="color: #22c55e; font-size: 20px;">&#8644;</div>
+  <div style="background: #0d9488; color: #fff; font-weight: 600; padding: 12px 16px; border-radius: 8px; font-size: 13px; text-align: center;">OpenClaw Agent<br><span style="font-weight: 400; font-size: 11px; opacity: 0.8;">poll() / send()</span></div>
+</div>
 
 ---
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Windows 11 Host                          │
-│                                                                 │
-│  ┌─────────────────┐                                           │
-│  │   Coding Agent   │                                           │
-│  │   (Terminal)    │                                           │
-│  └────────┬────────┘                                           │
-│           │                                                     │
-│           │ wsl -d <instance> -e bash -c '...'                 │
-│           ▼                                                     │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    WSL2 Instance                         │   │
-│  │                                                          │   │
-│  │  ┌──────────────┐    ┌──────────────┐    ┌───────────┐  │   │
-│  │  │ agent-comm   │    │ Message      │    │ OpenClaw  │  │   │
-│  │  │ CLI/Library  │◄──►│ Spool        │◄──►│ Gateway   │  │   │
-│  │  └──────────────┘    │ (SQLite)     │    │ Agent     │  │   │
-│  │                      └──────────────┘    └───────────┘  │   │
-│  │                                                          │   │
-│  │  Location: ~/projects/agent-comm/data/coordination.db   │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-```
+<div style="font-family: 'Inter', system-ui, sans-serif; max-width: 660px; margin: 1.5em auto;">
+
+  <div style="background: #1e293b; border: 2px solid #475569; border-radius: 14px; padding: 20px;">
+    <div style="color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 12px;">Windows 11 Host</div>
+
+    <div style="background: #2563eb; border-radius: 10px; padding: 14px 20px; color: #fff; font-weight: 600; display: inline-block; margin-bottom: 14px; box-shadow: 0 0 16px rgba(37,99,235,0.3);">Coding Agent (Terminal)</div>
+
+    <div style="text-align: center; color: #64748b; font-size: 12px; margin: 8px 0;">wsl -d &lt;instance&gt; -e bash -c '...' &darr;</div>
+
+    <div style="background: #0f172a; border: 2px solid #334155; border-radius: 12px; padding: 18px; margin-top: 4px;">
+      <div style="color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 14px;">WSL2 Instance</div>
+
+      <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center;">
+        <div style="background: #7c3aed; border-radius: 10px; padding: 12px 16px; color: #fff; text-align: center; font-size: 13px; font-weight: 600; box-shadow: 0 0 12px rgba(124,58,237,0.3);">agent-comm<br><span style="font-weight: 400; font-size: 11px; opacity: 0.8;">CLI / Library</span></div>
+        <div style="color: #64748b; font-size: 20px;">&harr;</div>
+        <div style="background: #f59e0b; border-radius: 10px; padding: 12px 16px; color: #000; text-align: center; font-size: 13px; font-weight: 600; box-shadow: 0 0 12px rgba(245,158,11,0.3);">Message Spool<br><span style="font-weight: 400; font-size: 11px;">SQLite</span></div>
+        <div style="color: #64748b; font-size: 20px;">&harr;</div>
+        <div style="background: #0d9488; border-radius: 10px; padding: 12px 16px; color: #fff; text-align: center; font-size: 13px; font-weight: 600; box-shadow: 0 0 12px rgba(13,148,136,0.3);">OpenClaw<br><span style="font-weight: 400; font-size: 11px; opacity: 0.8;">Gateway Agent</span></div>
+      </div>
+
+      <div style="text-align: center; color: #475569; font-size: 11px; margin-top: 12px;">~/projects/agent-comm/data/coordination.db</div>
+    </div>
+  </div>
+
+</div>
 
 ### Key Components
 
@@ -294,9 +300,12 @@ All messages follow the MessageV2 schema:
 
 ### Delivery States
 
-```
-queued → leased → acked
-                ↘ failed (after max_attempts)
+```mermaid
+stateDiagram-v2
+    [*] --> queued
+    queued --> leased : claimed by recipient
+    leased --> acked : successfully processed
+    leased --> failed : max_attempts exceeded
 ```
 
 | State | Description |
@@ -392,13 +401,21 @@ The OpenClaw bridge connects agent-comm to OpenClaw/Clawdbot gateway agents.
 
 ### How the Bridge Works
 
-```
-1. Coding Agent sends message → Spool (queued)
-2. Bridge polls spool for messages to gateway agent
-3. Bridge calls: openclaw agent --message "<body>" --json
-4. Gateway agent processes and responds
-5. Bridge sends response back → Spool
-6. Coding Agent polls for response
+```mermaid
+sequenceDiagram
+    participant CA as Coding Agent
+    participant SP as Message Spool
+    participant BR as Bridge
+    participant GW as OpenClaw Gateway
+
+    CA->>SP: 1. send message (queued)
+    BR->>SP: 2. poll for messages
+    SP-->>BR: message delivered
+    BR->>GW: 3. openclaw agent --message "..." --json
+    GW-->>BR: 4. response
+    BR->>SP: 5. send response back
+    CA->>SP: 6. poll for response
+    SP-->>CA: response delivered
 ```
 
 ### Bridge Command

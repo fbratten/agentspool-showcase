@@ -115,32 +115,24 @@ class MessageV2:
 
 ### Delivery States
 
-```
-           ┌─────────┐
-           │ queued  │ ← Message sent, waiting for recipient
-           └────┬────┘
-                │
-         poll() │ claim
-                ▼
-           ┌─────────┐
-           │ leased  │ ← Claimed by recipient, processing
-           └────┬────┘
-                │
-       ┌────────┴────────┐
-       │                 │
-   ack()              nack() / timeout
-       │                 │
-       ▼                 ▼
-  ┌─────────┐      ┌─────────┐
-  │  acked  │      │ queued  │ ← Retry (up to max_attempts)
-  └─────────┘      └────┬────┘
-                        │
-                   max retries
-                        │
-                        ▼
-                   ┌─────────┐
-                   │ failed  │
-                   └─────────┘
+```mermaid
+stateDiagram-v2
+    [*] --> queued : Message sent
+    queued --> leased : poll() / claim
+    leased --> acked : ack()
+    leased --> queued : nack() / timeout
+(retry)
+    queued --> failed : max retries
+exceeded
+
+    state queued {
+        direction LR
+    }
+
+    note right of queued : Waiting for recipient
+    note right of leased : Claimed, processing
+    note left of acked : Successfully processed
+    note right of failed : Delivery abandoned
 ```
 
 ### Payload Types
