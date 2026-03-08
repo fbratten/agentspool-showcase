@@ -130,6 +130,23 @@ python3 -m agent_comm ack msg_20260130_143022_a1b2c3 agent-b
 - [AI Agent Integration Guide](./docs/agent-integration.md)
 - [Implementation Guide](./docs/implementation-guide.md)
 
+## What can a Microsoft Copilot AI agent do here?
+
+For this repository, a Microsoft Copilot-style agent is mainly acting as a coding and documentation collaborator.
+
+| Scope | What it can do |
+|-------|----------------|
+| **General agent capabilities** | Read and understand the repo, explain architecture, edit Markdown/HTML/JS, make targeted improvements, run existing validation, and summarize the impact of a change. |
+| **Inside the agentspool showcase** | Describe how agentspool works, explain the message spool / registry / MCP model, compare agent roles, and improve the static demos and docs that communicate those ideas. |
+| **Explicitly in `agentspool-showcase`** | Update the homepage, README, docs, and interactive demo content that present the project. This repo is the showcase layer, not the production Python package itself. |
+
+### In practice
+
+- Document where a Copilot-like coding agent fits in an agentspool network
+- Clarify which tasks belong in this static-site repo versus the main runtime repo
+- Improve the wording, structure, and examples used to explain agent communication
+- Keep the public-facing site aligned with the capabilities shown in the demos and guides
+
 ## License
 
 MIT License - See [LICENSE](./LICENSE) for details.

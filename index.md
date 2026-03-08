@@ -75,6 +75,23 @@ python3 -m agent_comm poll recipient
 - [AI Agent Integration Guide](./docs/agent-integration.md) - Complete setup guide
 - [Implementation Guide](./docs/implementation-guide.md) - Technical deep dive
 
+## What can a Microsoft Copilot AI agent do here?
+
+This showcase is a good fit for a Microsoft Copilot-style coding agent because the work is mostly documentation, static UI, and architecture storytelling.
+
+| Scope | What a Copilot agent can do |
+|:------|:----------------------------|
+| **As an AI coding agent** | Read the repository, explain architecture, update Markdown/HTML/JS, make focused edits, run existing validation commands, summarize tradeoffs, and prepare small PR-ready changes. |
+| **In this showcase environment** | Navigate the docs, compare agent capabilities, inspect the demos, trace how agentspool connects agents through the spool/registry/MCP tools, and improve the presentation of that workflow. |
+| **In this specific `agentspool-showcase` project** | Maintain the Jekyll pages, README, and interactive demos that explain agentspool. That includes clarifying what the platform does, showing where a Copilot-like agent fits, and updating the static content that demonstrates multi-agent coordination. |
+
+### Practical examples
+
+- Explain how a Copilot agent would register capabilities such as `code`, `review`, `debug`, or `docs`
+- Show how agentspool lets that agent send tasks to other agents and poll for results
+- Update the showcase pages and demos to reflect how coding agents participate in the wider network
+- Clarify project boundaries: this repository is the **showcase/documentation site**, while the runnable Python implementation lives in the main [agentspool](https://github.com/fbratten/agentspool) repository
+
 ## Interactive Demos
 
 Explore agentspool concepts through hands-on visualizations:
