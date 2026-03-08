@@ -142,9 +142,9 @@ For this repository, a Microsoft Copilot-style agent is mainly acting as a codin
 
 ### In practice
 
-- Document where a Copilot-like coding agent fits in an agentspool network
+- Explain how a Copilot agent would register illustrative capabilities such as `code`, `review`, `debug`, or `docs`
+- Show how agentspool lets that agent send tasks to other agents and poll for results
 - Clarify which tasks belong in this static-site repo versus the main runtime repo
-- Improve the wording, structure, and examples used to explain agent communication
 - Keep the public-facing site aligned with the capabilities shown in the demos and guides
 
 ## License

@@ -87,7 +87,7 @@ This showcase is a good fit for a Microsoft Copilot-style coding agent because t
 
 ### Practical examples
 
-- Explain how a Copilot agent would register capabilities such as `code`, `review`, `debug`, or `docs`
+- Explain how a Copilot agent would register illustrative capabilities such as `code`, `review`, `debug`, or `docs`
 - Show how agentspool lets that agent send tasks to other agents and poll for results
 - Update the showcase pages and demos to reflect how coding agents participate in the wider network
 - Clarify project boundaries: this repository is the **showcase/documentation site**, while the runnable Python implementation lives in the main [agentspool](https://github.com/fbratten/agentspool) repository
