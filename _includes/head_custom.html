@@ -1,29 +1,13 @@
 <style>
-/* Fix Mermaid v11 diagram visibility on Just the Docs dark theme.
-   Mermaid SVGs live inside code.language-mermaid, NOT .mermaid divs.
-   Sequence diagrams use SVG <text>, state diagrams use foreignObject HTML. */
-
-/* Sequence diagram message labels — light text on dark background */
-code.language-mermaid svg text.messageText {
-  fill: #e2e8f0 !important;
-}
-
-/* Actor labels — keep black on light actor boxes */
-code.language-mermaid svg text.actor {
-  fill: #000 !important;
-}
+/* Mermaid v11 dark theme overrides — base CSS.
+   Mermaid's ID-scoped styles (#mermaid-XXXX) beat class selectors,
+   so we also use a post-render JS patch below for text fills. */
 
 /* State diagram transition labels (HTML inside foreignObject) */
 code.language-mermaid svg foreignObject span,
 code.language-mermaid svg foreignObject p,
 code.language-mermaid svg foreignObject div {
   color: #e2e8f0 !important;
-}
-
-/* Actor boxes — dark background so light text is readable */
-code.language-mermaid svg rect.actor {
-  fill: #1e293b !important;
-  stroke: #64748b !important;
 }
 
 /* Actor lifelines */
@@ -53,7 +37,7 @@ code.language-mermaid svg.statediagram path.transition {
   stroke: #94a3b8 !important;
 }
 
-/* Edge labels (used in various diagram types) */
+/* Edge labels */
 code.language-mermaid svg .edgeLabel {
   color: #e2e8f0 !important;
   background-color: #1e293b !important;
@@ -65,10 +49,48 @@ code.language-mermaid svg .note {
   stroke: #f59e0b !important;
 }
 
-/* Activation boxes in sequence diagrams */
+/* Activation boxes */
 code.language-mermaid svg .activation0,
 code.language-mermaid svg .activation1 {
   fill: #334155 !important;
   stroke: #64748b !important;
 }
 </style>
+
+<script>
+// Post-render patch: Mermaid's ID-scoped inline <style> blocks
+// have higher specificity than any class selector. We wait for
+// Mermaid to finish rendering, then directly set fill attributes.
+document.addEventListener('DOMContentLoaded', function() {
+  function patchMermaid() {
+    document.querySelectorAll('code.language-mermaid svg').forEach(function(svg) {
+      // Message text: light on dark page
+      svg.querySelectorAll('text.messageText').forEach(function(t) {
+        t.setAttribute('fill', '#e2e8f0');
+      });
+      // Actor box labels: black on light actor boxes
+      svg.querySelectorAll('text.actor').forEach(function(t) {
+        t.setAttribute('fill', '#000000');
+      });
+      // Actor boxes: keep light background (Mermaid default #eaeaea is fine)
+      // State node labels inside foreignObject
+      svg.querySelectorAll('foreignObject span, foreignObject div, foreignObject p').forEach(function(el) {
+        el.style.setProperty('color', '#e2e8f0', 'important');
+      });
+    });
+  }
+  // Mermaid renders async — retry until SVGs appear
+  var attempts = 0;
+  var interval = setInterval(function() {
+    var svgs = document.querySelectorAll('code.language-mermaid svg text');
+    if (svgs.length > 0 || attempts > 20) {
+      clearInterval(interval);
+      patchMermaid();
+      // Patch again after a short delay in case Mermaid re-renders
+      setTimeout(patchMermaid, 500);
+      setTimeout(patchMermaid, 2000);
+    }
+    attempts++;
+  }, 200);
+});
+</script>
