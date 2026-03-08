@@ -115,19 +115,36 @@ class MessageV2:
 
 ### Delivery States
 
-```mermaid
-stateDiagram-v2
-    [*] --> queued : Message sent
-    queued --> leased : poll() / claim
-    leased --> acked : ack()
-    leased --> queued : nack() / timeout (retry)
-    queued --> failed : max retries exceeded
-
-    note right of queued : Waiting for recipient
-    note right of leased : Claimed, processing
-    note left of acked : Successfully processed
-    note right of failed : Delivery abandoned
-```
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px; font-family: 'Inter', system-ui, sans-serif; padding: 20px 0;">
+  <div style="width: 12px; height: 12px; border-radius: 50%; background: #94a3b8;"></div>
+  <div style="font-size: 11px; color: #94a3b8;">Message sent &darr;</div>
+  <div style="display: flex; align-items: center; gap: 16px;">
+    <div style="background: #2563eb; color: #fff; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600;">queued</div>
+    <div style="font-size: 11px; color: #64748b;">Waiting for recipient</div>
+  </div>
+  <div style="font-size: 11px; color: #94a3b8;">poll() / claim &darr;</div>
+  <div style="display: flex; align-items: center; gap: 16px;">
+    <div style="background: #f59e0b; color: #000; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600;">leased</div>
+    <div style="font-size: 11px; color: #64748b;">Claimed, processing</div>
+  </div>
+  <div style="display: flex; gap: 48px; margin-top: 4px;">
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #94a3b8;">ack() &darr;</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="background: #22c55e; color: #000; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600;">acked</div>
+        <div style="font-size: 11px; color: #64748b;">Successfully processed</div>
+      </div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #94a3b8;">max retries exceeded &darr;</div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="background: #ef4444; color: #fff; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600;">failed</div>
+        <div style="font-size: 11px; color: #64748b;">Delivery abandoned</div>
+      </div>
+    </div>
+  </div>
+  <div style="font-size: 11px; color: #94a3b8; margin-top: 8px;">&uarr; nack() / timeout (retry) returns to <strong style="color: #60a5fa;">queued</strong></div>
+</div>
 
 ### Payload Types
 
@@ -675,14 +692,13 @@ Assistant: [Uses send_message tool with to="research-agent", body="What are the 
 
 All agents on one machine using SQLite transport:
 
-```mermaid
-graph LR
-    A["Agent A"] <--> DB[("coordination.db")] <--> B["Agent B"]
-
-    style A fill:#2563eb,stroke:#2563eb,color:#fff
-    style B fill:#2563eb,stroke:#2563eb,color:#fff
-    style DB fill:#f59e0b,stroke:#d97706,color:#000
-```
+<div style="display: flex; align-items: center; gap: 16px; justify-content: center; font-family: 'Inter', system-ui, sans-serif; max-width: 480px;">
+  <div style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap;">Agent A</div>
+  <div style="color: #94a3b8; font-size: 18px;">&#8644;</div>
+  <div style="background: #0f172a; border: 2px solid #f59e0b; color: #f59e0b; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; white-space: nowrap;">coordination.db</div>
+  <div style="color: #94a3b8; font-size: 18px;">&#8644;</div>
+  <div style="background: #2563eb; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap;">Agent B</div>
+</div>
 
 **Setup:**
 ```bash

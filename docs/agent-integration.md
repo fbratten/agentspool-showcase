@@ -300,13 +300,23 @@ All messages follow the MessageV2 schema:
 
 ### Delivery States
 
-```mermaid
-stateDiagram-v2
-    [*] --> queued
-    queued --> leased : claimed by recipient
-    leased --> acked : successfully processed
-    leased --> failed : max_attempts exceeded
-```
+<div style="display: flex; flex-direction: column; align-items: center; gap: 8px; font-family: 'Inter', system-ui, sans-serif; padding: 20px 0;">
+  <div style="width: 12px; height: 12px; border-radius: 50%; background: #94a3b8;"></div>
+  <div style="color: #475569;">&#9661;</div>
+  <div style="background: #2563eb; color: #fff; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600;">queued</div>
+  <div style="font-size: 11px; color: #94a3b8;">claimed by recipient &darr;</div>
+  <div style="background: #f59e0b; color: #000; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600;">leased</div>
+  <div style="display: flex; gap: 60px; margin-top: 4px;">
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #94a3b8;">successfully processed &darr;</div>
+      <div style="background: #22c55e; color: #000; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-top: 4px;">acked</div>
+    </div>
+    <div style="text-align: center;">
+      <div style="font-size: 11px; color: #94a3b8;">max_attempts exceeded &darr;</div>
+      <div style="background: #ef4444; color: #fff; padding: 10px 28px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-top: 4px;">failed</div>
+    </div>
+  </div>
+</div>
 
 | State | Description |
 |-------|-------------|
@@ -401,22 +411,24 @@ The OpenClaw bridge connects agent-comm to OpenClaw/Clawdbot gateway agents.
 
 ### How the Bridge Works
 
-```mermaid
-sequenceDiagram
-    participant CA as Coding Agent
-    participant SP as Message Spool
-    participant BR as Bridge
-    participant GW as OpenClaw Gateway
-
-    CA->>SP: 1. send message (queued)
-    BR->>SP: 2. poll for messages
-    SP-->>BR: message delivered
-    BR->>GW: 3. openclaw agent --message "..." --json
-    GW-->>BR: 4. response
-    BR->>SP: 5. send response back
-    CA->>SP: 6. poll for response
-    SP-->>CA: response delivered
-```
+<div style="font-family: 'Inter', system-ui, sans-serif; max-width: 720px; margin: 1em auto; background: #0f172a; border-radius: 12px; padding: 20px; border: 1px solid #334155;">
+  <div style="display: flex; justify-content: space-between; margin-bottom: 16px;">
+    <div style="background: #2563eb; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; text-align: center;">Coding Agent</div>
+    <div style="background: #f59e0b; color: #000; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; text-align: center;">Message Spool</div>
+    <div style="background: #7c3aed; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; text-align: center;">Bridge</div>
+    <div style="background: #0d9488; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; text-align: center;">OpenClaw Gateway</div>
+  </div>
+  <div style="font-size: 12px; color: #94a3b8; line-height: 2.2; padding: 0 8px;">
+    <div><span style="color: #60a5fa;">1.</span> Coding Agent <span style="color: #22c55e;">&rarr;</span> Message Spool: <span style="color: #e2e8f0;">send message (queued)</span></div>
+    <div><span style="color: #60a5fa;">2.</span> Bridge <span style="color: #22c55e;">&rarr;</span> Message Spool: <span style="color: #e2e8f0;">poll for messages</span></div>
+    <div><span style="color: #60a5fa;">&nbsp;&nbsp;</span> Message Spool <span style="color: #f59e0b;">&dashrightarrow;</span> Bridge: <span style="color: #e2e8f0;">message delivered</span></div>
+    <div><span style="color: #60a5fa;">3.</span> Bridge <span style="color: #22c55e;">&rarr;</span> OpenClaw Gateway: <span style="color: #e2e8f0;">openclaw agent --message "..." --json</span></div>
+    <div><span style="color: #60a5fa;">4.</span> OpenClaw Gateway <span style="color: #f59e0b;">&dashrightarrow;</span> Bridge: <span style="color: #e2e8f0;">response</span></div>
+    <div><span style="color: #60a5fa;">5.</span> Bridge <span style="color: #22c55e;">&rarr;</span> Message Spool: <span style="color: #e2e8f0;">send response back</span></div>
+    <div><span style="color: #60a5fa;">6.</span> Coding Agent <span style="color: #22c55e;">&rarr;</span> Message Spool: <span style="color: #e2e8f0;">poll for response</span></div>
+    <div><span style="color: #60a5fa;">&nbsp;&nbsp;</span> Message Spool <span style="color: #f59e0b;">&dashrightarrow;</span> Coding Agent: <span style="color: #e2e8f0;">response delivered</span></div>
+  </div>
+</div>
 
 ### Bridge Command
 
