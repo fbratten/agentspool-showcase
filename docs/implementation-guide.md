@@ -120,14 +120,8 @@ stateDiagram-v2
     [*] --> queued : Message sent
     queued --> leased : poll() / claim
     leased --> acked : ack()
-    leased --> queued : nack() / timeout
-(retry)
-    queued --> failed : max retries
-exceeded
-
-    state queued {
-        direction LR
-    }
+    leased --> queued : nack() / timeout (retry)
+    queued --> failed : max retries exceeded
 
     note right of queued : Waiting for recipient
     note right of leased : Claimed, processing
