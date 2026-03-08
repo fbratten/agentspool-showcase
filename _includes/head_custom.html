@@ -3,10 +3,14 @@
    Mermaid SVGs live inside code.language-mermaid, NOT .mermaid divs.
    Sequence diagrams use SVG <text>, state diagrams use foreignObject HTML. */
 
-/* Sequence diagram message labels (SVG text with fill:#333) */
-code.language-mermaid svg text,
-.language-mermaid svg text {
+/* Sequence diagram message labels — light text on dark background */
+code.language-mermaid svg text.messageText {
   fill: #e2e8f0 !important;
+}
+
+/* Actor labels — keep black on light actor boxes */
+code.language-mermaid svg text.actor {
+  fill: #000 !important;
 }
 
 /* State diagram transition labels (HTML inside foreignObject) */
