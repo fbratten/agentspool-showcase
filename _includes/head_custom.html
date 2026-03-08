@@ -1,49 +1,70 @@
 <style>
-/* Fix Mermaid diagram text visibility on dark theme */
-.mermaid text,
-.mermaid .messageText,
-.mermaid .labelText,
-.mermaid .loopText,
-.mermaid .noteText,
-.mermaid .actor,
-.mermaid .statediagram-state .state-title,
-.mermaid .label text,
-.mermaid span.edgeLabel {
+/* Fix Mermaid v11 diagram visibility on Just the Docs dark theme.
+   Mermaid SVGs live inside code.language-mermaid, NOT .mermaid divs.
+   Sequence diagrams use SVG <text>, state diagrams use foreignObject HTML. */
+
+/* Sequence diagram message labels (SVG text with fill:#333) */
+code.language-mermaid svg text,
+.language-mermaid svg text {
   fill: #e2e8f0 !important;
+}
+
+/* State diagram transition labels (HTML inside foreignObject) */
+code.language-mermaid svg foreignObject span,
+code.language-mermaid svg foreignObject p,
+code.language-mermaid svg foreignObject div {
   color: #e2e8f0 !important;
 }
 
-/* Actor boxes (participant labels) */
-.mermaid .actor {
-  stroke: #64748b !important;
+/* Actor boxes — dark background so light text is readable */
+code.language-mermaid svg rect.actor {
   fill: #1e293b !important;
+  stroke: #64748b !important;
 }
-.mermaid .actor-line {
+
+/* Actor lifelines */
+code.language-mermaid svg .actor-line {
   stroke: #475569 !important;
 }
 
-/* Sequence diagram message lines */
-.mermaid .messageLine0,
-.mermaid .messageLine1 {
+/* Sequence diagram message lines and arrows */
+code.language-mermaid svg .messageLine0,
+code.language-mermaid svg .messageLine1 {
   stroke: #94a3b8 !important;
 }
-
-/* Arrowheads */
-.mermaid #arrowhead path,
-.mermaid .arrowMarkerPath {
+code.language-mermaid svg marker path {
   fill: #94a3b8 !important;
   stroke: #94a3b8 !important;
 }
 
-/* State diagram */
-.mermaid .statediagram-state rect {
+/* State diagram boxes */
+code.language-mermaid svg.statediagram rect,
+code.language-mermaid svg .statediagram-state rect {
   fill: #1e293b !important;
   stroke: #64748b !important;
 }
 
-/* Notes */
-.mermaid .note {
+/* State diagram transition lines */
+code.language-mermaid svg.statediagram path.transition {
+  stroke: #94a3b8 !important;
+}
+
+/* Edge labels (used in various diagram types) */
+code.language-mermaid svg .edgeLabel {
+  color: #e2e8f0 !important;
+  background-color: #1e293b !important;
+}
+
+/* Note boxes */
+code.language-mermaid svg .note {
   fill: #1e293b !important;
   stroke: #f59e0b !important;
+}
+
+/* Activation boxes in sequence diagrams */
+code.language-mermaid svg .activation0,
+code.language-mermaid svg .activation1 {
+  fill: #334155 !important;
+  stroke: #64748b !important;
 }
 </style>
